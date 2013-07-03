@@ -19,7 +19,7 @@ class Convert
 	static int count_notset=0;
 	public static void main(String args[]) throws IOException
 	{
-		File ip=new File("/home/s23subra/Desktop/android2.txt");
+		File ip=new File("/home/s23subra/Desktop/parts.unique");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
 
 		Document root=DocumentHelper.createDocument();
@@ -42,6 +42,9 @@ class Convert
 
 		while((line=br.readLine())!=null)
 		{
+			count_notset++;
+			if(count_notset%100==0)
+				System.out.println(count_notset);
 			if(line.startsWith("method;"))
 			{
 				getmethod(line,classDetails);
@@ -49,7 +52,7 @@ class Convert
 			else if(line.startsWith("class;"))
 			{
 				getclass(line,classList,inherits);
-				count_notset++;
+				
 			}
 			else if(line.startsWith("field;"))
 			{
@@ -63,7 +66,7 @@ class Convert
 				System.out.println(line);
 		}
 		OutputFormat format = OutputFormat.createPrettyPrint();
-		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/android_new.xml")),format);
+		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/parts.unique_xml.xml")),format);
 		output.write( main_root);
 		output.close();
 
@@ -120,19 +123,45 @@ class Convert
 			List<Element>blah2=inherits.elements("inh");
 			ListIterator<Element>iter2=blah2.listIterator(blah2.size());
 			int flag2=0;
+			/*
 			while(iter.hasPrevious())
 			{
 				Element inh_temp=iter.previous();
 				if(inh_temp.attributeValue("p").equals(superclass) && inh_temp.attributeValue("c").equals(id))
 				{
 					flag2=1;
+					System.out.println("flag*** "+ line);
 					break;
 				}
 			}
+			*/
 			if(flag2==0)
 			{
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", superclass);
+				inh.addAttribute("c", id);
+			}
+		}
+		
+		String [] implemented_classes=null;
+		int implements_flag=0;
+		for(int i=0;i<temp_next.length;i++)
+		{
+			String word=temp_next[i];
+			if(word.trim().equals("implements"))
+			{
+				implemented_classes=temp_next[i+1].split(",");
+				//System.out.println("---"+temp_next[i+1]);
+				implements_flag=1;
+				break;
+			}
+		}
+		if(implements_flag==1)
+		{
+			for(String tempstring:implemented_classes)
+			{
+				Element inh=inherits.addElement("inh");
+				inh.addAttribute("p", tempstring);
 				inh.addAttribute("c", id);
 			}
 		}
@@ -154,11 +183,11 @@ class Convert
 		String[] params=null;
 		String vis="notset";
 		int constructor_flag=0;
-		if(shortname.contains("access$"))
+		if(shortname.startsWith("access$"))
 		{
 			return;
 		}
-		if(Character.isUpperCase(shortname.charAt(0)))
+		if(Character.isUpperCase(shortname.charAt(0)) && temp[2].endsWith("."+shortname))
 		{
 			id=id+"<init>";
 			return_type="void";
@@ -186,7 +215,7 @@ class Convert
 		}
 		int i1=line.indexOf("(");
 		int i2=line.lastIndexOf(")");
-		id=id+line.substring(i1, line.length()-1);
+		id=id+line.substring(i1, i2+1);
 		params=line.substring(i1+1, i2).split(",");
 		Element current=null;
 		List<Element> blah = classDetails.elements("ce");
@@ -210,14 +239,23 @@ class Convert
 		List<Element> blah2=current.elements("me");
 		ListIterator<Element> iter2=blah2.listIterator(blah2.size());
 		int flag=0;
+		/*
 		while(iter2.hasPrevious())
 		{
 			Element ele=iter2.previous();
-			if(ele.attributeValue("id").equals(id))
+			if(ele.attributeValue("id").equals(id) && ele.attributeValue("vis").equals(vis))
 			{
-				flag=1;
+				
+				if(ele.element("return").attributeValue("id").equals(return_type))
+				{
+					System.out.println(ele.asXML());
+					System.out.println("flag+++ "+ line);
+					System.out.println("%%%"+id);
+					flag=1;
+				}
 			}
 		}
+		*/
 		if(flag==0)
 		{
 			Element me=current.addElement("me");
@@ -294,14 +332,17 @@ class Convert
 		List<Element> blah2=current.elements("fe");
 		ListIterator<Element> iter2=blah2.listIterator(blah2.size());
 		int flag=0;
+		/*
 		while(iter2.hasPrevious())
 		{
 			Element ele=iter2.previous();
 			if(ele.attributeValue("id").equals(id))
 			{
+				System.out.println("flag--- "+ line);
 				flag=1;
 			}
 		}
+		*/
 		if(flag==0)
 		{
 			Element fe=current.addElement("fe");
@@ -370,6 +411,7 @@ class Convert
 			List<Element>blah2=inherits.elements("inh");
 			ListIterator<Element>iter2=blah2.listIterator(blah2.size());
 			int flag2=0;
+			/*
 			while(iter.hasPrevious())
 			{
 				Element inh_temp=iter.previous();
@@ -379,10 +421,33 @@ class Convert
 					break;
 				}
 			}
+			*/
 			if(flag2==0)
 			{
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", superclass);
+				inh.addAttribute("c", id);
+			}
+		}
+		String [] implemented_classes=null;
+		int implements_flag=0;
+		for(int i=0;i<temp_next.length;i++)
+		{
+			String word=temp_next[i];
+			if(word.trim().equals("implements"))
+			{
+				implemented_classes=temp_next[i+1].split(",");
+				//System.out.println("---"+temp_next[i+1]);
+				implements_flag=1;
+				break;
+			}
+		}
+		if(implements_flag==1)
+		{
+			for(String tempstring:implemented_classes)
+			{
+				Element inh=inherits.addElement("inh");
+				inh.addAttribute("p", tempstring);
 				inh.addAttribute("c", id);
 			}
 		}
