@@ -17,7 +17,7 @@ import org.dom4j.io.XMLWriter;
 class Convert
 {
 	static int count_notset=0;
-	public static void main(String args[]) throws IOException
+	public Convert() throws IOException
 	{
 		File ip=new File("/home/s23subra/Desktop/parts.unique");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
