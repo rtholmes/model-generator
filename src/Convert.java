@@ -3,23 +3,21 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
-import org.dom4j.Node;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 
 class Convert
 {
 	static int count_notset=0;
-	public Convert() throws IOException
+	public static void main(String args[]) throws IOException
 	{
-		File ip=new File("/home/s23subra/Desktop/parts.unique");
+		File ip=new File("/home/s23subra/Desktop/maven_data/split_files/a.a.txt");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
 
 		Document root=DocumentHelper.createDocument();
@@ -66,7 +64,7 @@ class Convert
 				System.out.println(line);
 		}
 		OutputFormat format = OutputFormat.createPrettyPrint();
-		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/parts.unique_xml.xml")),format);
+		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/a.a.xml")),format);
 		output.write( main_root);
 		output.close();
 
@@ -187,7 +185,8 @@ class Convert
 		{
 			return;
 		}
-		if(Character.isUpperCase(shortname.charAt(0)) && temp[2].endsWith("."+shortname))
+		//if(Character.isUpperCase(shortname.charAt(0)) && temp[2].endsWith("."+shortname))
+		if(temp[2].endsWith("."+shortname))
 		{
 			id=id+"<init>";
 			return_type="void";
