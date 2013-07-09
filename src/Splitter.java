@@ -4,28 +4,32 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.TreeSet;
 
 public class Splitter
 {
-
+	static TreeSet<String> names = new TreeSet<String>();
+	static int split_length=3;
 	public static File getFileForClass(String line)
 	{
+		
 		String[] semicolonbreak = line.split(";");
-		String[] nametokens = semicolonbreak[1].split("\\.");
+		String[] nametokens = semicolonbreak[1].split("[\\.\\$]");
 		File new_file=null;
-		if(nametokens.length>2)
+		if(nametokens.length>split_length)
 		{
 			String name="/home/s23subra/Desktop/maven_data/split_files/";
-			int len=nametokens.length;
 			int i=0;
 			for(String s: nametokens)
 			{
-
 				i++;
-				if(i<=len-2 && s.contains("\\$")==false )
+				if(i==nametokens.length-1)
+					break;
+				if(i<=split_length)
 					name=name+s+".";
 				else
 					break;
+				
 			}
 			String file_name=name.substring(0, name.length()-1)+".txt";
 			if(file_name.equals("home/s23subra/Desktop/maven_data/split_files/.txt"))
@@ -34,7 +38,7 @@ public class Splitter
 		}
 		else
 			new_file = new File("/home/s23subra/Desktop/maven_data/split_files/"+"general.txt");
-
+		
 		if(semicolonbreak[1].contains("$")==true)
 		{
 			String[] temp = semicolonbreak[1].split("\\$");
@@ -50,18 +54,19 @@ public class Splitter
 	public static File getFileForInterface(String line)
 	{
 		String[] semicolonbreak = line.split(";");
-		String[] nametokens = semicolonbreak[1].split("\\.");
+		String[] nametokens = semicolonbreak[1].split("[\\.\\$]");
 		File new_file=null;
-		if(nametokens.length>2)
+		if(nametokens.length>split_length)
 		{
 			String name="/home/s23subra/Desktop/maven_data/split_files/";
-			int len=nametokens.length;
 			int i=0;
 			for(String s: nametokens)
 			{
 
 				i++;
-				if(i<=len-2 && s.contains("\\$")==false )
+				if(i==nametokens.length-1)
+					break;
+				if(i<=split_length)
 					name=name+s+".";
 				else
 					break;
@@ -87,19 +92,20 @@ public class Splitter
 	public static File getFileForMethod(String line)
 	{
 		String[] semicolonbreak = line.split(";");
-		String[] nametokens = semicolonbreak[2].split("\\.");
+		String[] nametokens = semicolonbreak[2].split("[\\.\\$]");
 		File new_file=null;
 
-		if(nametokens.length>2)
+		if(nametokens.length>split_length)
 		{
 			String name="/home/s23subra/Desktop/maven_data/split_files/";
-			int len=nametokens.length;
 			int i=0;
 			for(String s: nametokens)
 			{
 
 				i++;
-				if(i<=len-2 && s.contains("\\$")==false )
+				if(i==nametokens.length-1)
+					break;
+				if(i<=split_length)
 					name=name+s+".";
 				else
 					break;
@@ -128,26 +134,26 @@ public class Splitter
 				new_file=null;
 			}
 		}
-
 		return new_file;
 	}
 
 	public static File getFileForField(String line)
 	{
 		String[] semicolonbreak = line.split(";");
-		String[] nametokens = semicolonbreak[2].split("\\.");
+		String[] nametokens = semicolonbreak[2].split("[\\.\\$]");
 		File new_file=null;
 
-		if(nametokens.length>2)
+		if(nametokens.length>split_length)
 		{
 			String name="/home/s23subra/Desktop/maven_data/split_files/";
-			int len=nametokens.length;
 			int i=0;
 			for(String s: nametokens)
 			{
 
 				i++;
-				if(i<=len-2 && s.contains("\\$")==false )
+				if(i==nametokens.length-1)
+					break;
+				if(i<=split_length)
 					name=name+s+".";
 				else
 					break;
@@ -196,21 +202,24 @@ public class Splitter
 					System.out.println(count);
 				if(line.startsWith("class;"))
 				{
-					new_file=getFileForClass(line);
+					//new_file=getFileForClass(line);
+					new_file=new File("/home/s23subra/Desktop/maven_data/class_file");
 				}
 				else if(line.startsWith("method;"))
 				{
 					new_file=getFileForMethod(line);
 				}
-				else if(line.startsWith("method;"))
+				else if(line.startsWith("field;"))
 				{
-					new_file=getFileForMethod(line);
+					new_file=getFileForField(line);
 				}
 				else if(line.startsWith("interface;"))
 				{
-					new_file=getFileForInterface(line);
+					//new_file=getFileForInterface(line);
+					new_file=new File("/home/s23subra/Desktop/maven_data/class_file");
 				}
-
+				if(new_file!=null)
+					names.add(new_file.getAbsolutePath());
 				if(new_file!=null)
 				{
 					bw=new BufferedWriter(new FileWriter(new_file, true));
@@ -224,6 +233,10 @@ public class Splitter
 		{
 			System.out.println(line);
 		}
+		
+		for(String temp:names)
+			System.out.println(temp);
+		System.out.println(names.size());
 		br.close();
 	}
 

@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
@@ -15,11 +17,23 @@ import org.dom4j.io.XMLWriter;
 class Convert
 {
 	static int count_notset=0;
-	public static void main(String args[]) throws IOException
-	{
-		File ip=new File("/home/s23subra/Desktop/maven_data/split_files/a.a.txt");
-		BufferedReader br=new BufferedReader(new FileReader(ip));
+	static TreeMap<String,String> classDetailsMap= new TreeMap<String, String>();
 
+	public static void fileIterator() throws IOException
+	{
+		getclassDetails();
+		File folder=new File("/home/s23subra/Desktop/maven_data/split_files/");
+		File[] fileList=folder.listFiles();
+		for(File f:fileList)
+		{
+			convert(f);
+		}
+	}
+
+	public static void convert(File ip) throws IOException
+	{
+
+		BufferedReader br=new BufferedReader(new FileReader(ip));
 		Document root=DocumentHelper.createDocument();
 		Element main_root=root.addElement("dependencyGraph");
 		Element declarations=main_root.addElement("declarations");
@@ -37,43 +51,89 @@ class Convert
 		callstacks.addAttribute("popCount", "0");
 		callstacks.addAttribute("pushCount", "0");
 		String line=null;
-
+		TreeSet<String> otherTypes=new TreeSet<String>();
 		while((line=br.readLine())!=null)
 		{
-			count_notset++;
-			if(count_notset%100==0)
-				System.out.println(count_notset);
+
 			if(line.startsWith("method;"))
 			{
-				getmethod(line,classDetails);
+				getmethod(line,classDetails,classList,inherits,otherTypes);
 			}
+			/*
 			else if(line.startsWith("class;"))
 			{
-				getclass(line,classList,inherits);
-				
-			}
-			else if(line.startsWith("field;"))
-			{
-				getfield(line, classDetails);
+				//getclass(line,classList,inherits);
 			}
 			else if(line.startsWith("interface;"))
 			{
-				getinterface(line,classList, inherits);
+				//getinterface(line,classList, inherits);
 			}
+			 */
+			else if(line.startsWith("field;"))
+			{
+				getfield(line, classDetails,classList,inherits, otherTypes);
+			}
+
 			else
 				System.out.println(line);
 		}
+		for(String type: otherTypes)
+		{
+			//System.out.println(type);
+			if(classDetailsMap.containsKey(type))
+			{
+				if(classDetailsMap.get(type).startsWith("class;"))
+					getclass(classDetailsMap.get(type), classList, inherits);
+				else
+					getinterface(classDetailsMap.get(type), classList, inherits);
+			}
+			else
+			{
+				String isAbs="false";
+				String isInt="false";
+				String isExt="false";
+				String visi="notset";
+				Element ce=classList.addElement("ce");
+				ce.addAttribute("id", type);
+				ce.addAttribute("vis", visi);
+				ce.addAttribute("isAbs", isAbs);
+				ce.addAttribute("isInt", isInt);
+				ce.addAttribute("isExt", isExt);
+			}
+		}
 		OutputFormat format = OutputFormat.createPrettyPrint();
-		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/a.a.xml")),format);
+
+		//XMLWriter writer = new XMLWriter( System.out, format );
+		//writer.write( main_root );
+
+
+		String fn=ip.getName();
+		count_notset++;
+		if(count_notset%100==0)
+			System.out.println(count_notset);
+		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/maven_data/xml/"+fn.substring(0, fn.length()-4)+".xml")),format);
 		output.write( main_root);
 		output.close();
+		br.close();
 
-		//output = new XMLWriter( System.out, format );
-		//output.write( document );
-		System.out.println("Completed");
-		System.out.println(count_notset);
 	}
 
+	public static void getclassDetails() throws IOException
+	{
+		File ip=new File("/home/s23subra/Desktop/maven_data/class_file");
+		BufferedReader br=new BufferedReader(new FileReader(ip));
+		String line=null;
+		while((line=br.readLine())!=null)
+		{
+			String[] temp=line.split(";");
+			String id=temp[1];
+			classDetailsMap.put(id, line);
+		}
+		br.close();
+	}
+
+
+	@SuppressWarnings("unchecked")
 	public static void getclass(String line, Element classList, Element inherits)
 	{
 		int flag=0;
@@ -118,21 +178,7 @@ class Convert
 		}
 		if(superclass!=null)
 		{
-			List<Element>blah2=inherits.elements("inh");
-			ListIterator<Element>iter2=blah2.listIterator(blah2.size());
 			int flag2=0;
-			/*
-			while(iter.hasPrevious())
-			{
-				Element inh_temp=iter.previous();
-				if(inh_temp.attributeValue("p").equals(superclass) && inh_temp.attributeValue("c").equals(id))
-				{
-					flag2=1;
-					System.out.println("flag*** "+ line);
-					break;
-				}
-			}
-			*/
 			if(flag2==0)
 			{
 				Element inh=inherits.addElement("inh");
@@ -140,7 +186,7 @@ class Convert
 				inh.addAttribute("c", id);
 			}
 		}
-		
+
 		String [] implemented_classes=null;
 		int implements_flag=0;
 		for(int i=0;i<temp_next.length;i++)
@@ -165,17 +211,18 @@ class Convert
 		}
 	}
 
-	public static void getmethod(String line, Element classDetails)
+	@SuppressWarnings("unchecked")
+	public static void getmethod(String line, Element classDetails, Element classList, Element inherits, TreeSet<String> otherTypes)
 	{
+
+
 		String[] temp=line.split(";");
 		String return_type="void";
 		String shortname=temp[1];
 		String cname=temp[2];
 		if(cname.charAt(temp[2].length()-1)=='{')
 		{
-			//System.out.println(cname);
 			cname=cname.substring(0, cname.length()-1);
-			//System.out.println(cname);
 		}
 		String id=cname+'.';
 		String[] params=null;
@@ -201,16 +248,16 @@ class Convert
 		String temp1 = null;
 		if(constructor_flag==0)
 		{
-		for(String ret: temp_next)
-		{
-			if(ret.contains("(")==true)
+			for(String ret: temp_next)
 			{
-				if(temp1!=null)
-					return_type=temp1;
-				break;
+				if(ret.contains("(")==true)
+				{
+					if(temp1!=null)
+						return_type=temp1;
+					break;
+				}
+				temp1=ret;
 			}
-			temp1=ret;
-		}
 		}
 		int i1=line.indexOf("(");
 		int i2=line.lastIndexOf(")");
@@ -234,51 +281,44 @@ class Convert
 			current=classDetails. addElement("ce");
 			current.addAttribute("id", cname);
 		}
+		if(otherTypes.contains(cname)==false)
+			otherTypes.add(cname);
+		Element me=current.addElement("me");
+		me.addAttribute("id", id);
+		me.addAttribute("vis", vis);
+		Element return_node=me.addElement("return");
+		if(isPrimitive(return_type)==false)
+			if(otherTypes.contains(return_type)==false)
+				otherTypes.add(return_type);
+		return_node.addAttribute("id", return_type);
 
-		List<Element> blah2=current.elements("me");
-		ListIterator<Element> iter2=blah2.listIterator(blah2.size());
-		int flag=0;
-		/*
-		while(iter2.hasPrevious())
+		if(i1+1!=i2)
 		{
-			Element ele=iter2.previous();
-			if(ele.attributeValue("id").equals(id) && ele.attributeValue("vis").equals(vis))
+			Element params_node=me.addElement("params");
+			int i=0;
+			for(String param:params)
 			{
-				
-				if(ele.element("return").attributeValue("id").equals(return_type))
-				{
-					System.out.println(ele.asXML());
-					System.out.println("flag+++ "+ line);
-					System.out.println("%%%"+id);
-					flag=1;
-				}
+				Element param_node=params_node.addElement("param");
+				param_node.addAttribute("index", String.valueOf(i));
+				param_node.addAttribute("type", param.trim());
+				if(isPrimitive(param.trim())==false)
+					if(otherTypes.contains(param.trim())==false)
+						otherTypes.add(param.trim());
+				i++;
 			}
 		}
-		*/
-		if(flag==0)
-		{
-			Element me=current.addElement("me");
-			me.addAttribute("id", id);
-			me.addAttribute("vis", vis);
-			Element return_node=me.addElement("return");
-			return_node.addAttribute("id", return_type);
-			if(i1+1!=i2)
-			{
-				Element params_node=me.addElement("params");
-				int i=0;
-				for(String param:params)
-				{
-					Element param_node=params_node.addElement("param");
-					param_node.addAttribute("index", String.valueOf(i));
-					param_node.addAttribute("type", param.trim());
-					i++;
-				}
-			}
-		}
-
 	}
 
-	public static void getfield(String line,Element classDetails)
+	private static boolean isPrimitive(String trim) {
+
+		if(trim.equals("int")==true || trim.equals("float")==true || trim.equals("char")==true || trim.equals("String")==true || trim.equals("boolean")==true || trim.equals("void")==true || trim.equals("int[]")==true || trim.equals("char[]")==true || trim.equals("String[]")==true || trim.equals("float[]")==true || trim.equals("boolean[]")==true || trim.equals("long")==true || trim.equals("long[]")==true || trim.equals("double")==true || trim.equals("double[]")==true || trim.equals("byte")==true || trim.equals("byte[]")==true)
+			return true;
+		else
+			return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static void getfield(String line, Element classDetails, Element classList, Element inherits, TreeSet<String> otherTypes)
 	{
 		String[] temp=line.split(";");
 		String shortname=temp[1];
@@ -286,17 +326,18 @@ class Convert
 		if(cname.charAt(temp[2].length()-1)=='{')
 			cname=cname.substring(0, cname.length()-1);
 		String id=cname+'.'+shortname;
+		otherTypes.add(cname);
 		String type="::UnknownType::";
 		String isExt="false";
 		String vis="notset";
-		
+
 		if(shortname.contains("this$") || shortname.equals("{}"))
 		{
 			return;
 		}
 		String[] temp_next=temp[3].split(" ");
 		vis=getVisibility(temp_next[0]);
-		
+
 		String temp1=null;
 		for(String ret: temp_next)
 		{
@@ -308,7 +349,7 @@ class Convert
 			}
 			temp1=ret;
 		}
-		
+
 		Element current=null;
 		List<Element> blah = classDetails.elements("ce");
 		ListIterator<Element> iter=blah.listIterator(blah.size());
@@ -328,29 +369,15 @@ class Convert
 			current.addAttribute("id", cname);
 		}
 
-		List<Element> blah2=current.elements("fe");
-		ListIterator<Element> iter2=blah2.listIterator(blah2.size());
-		int flag=0;
-		/*
-		while(iter2.hasPrevious())
-		{
-			Element ele=iter2.previous();
-			if(ele.attributeValue("id").equals(id))
-			{
-				System.out.println("flag--- "+ line);
-				flag=1;
-			}
-		}
-		*/
-		if(flag==0)
-		{
-			Element fe=current.addElement("fe");
-			fe.addAttribute("id", id);
-			fe.addAttribute("vis", vis);
-			fe.addAttribute("isExt", isExt);
-			fe.addAttribute("type", type);
-		}
+		Element fe=current.addElement("fe");
+		fe.addAttribute("id", id);
+		fe.addAttribute("vis", vis);
+		fe.addAttribute("isExt", isExt);
+		fe.addAttribute("type", type);
 	}
+
+
+	@SuppressWarnings("unchecked")
 	public static void getinterface(String line, Element classList, Element inherits)
 	{
 		int flag=0;
@@ -371,7 +398,7 @@ class Convert
 
 		List<Element>blah=classList.elements("ce");
 		ListIterator<Element>iter=blah.listIterator(blah.size());
-		
+
 		for(int i=0;i<temp_next.length;i++)
 		{
 			if(temp_next[i].trim().equals("interface"))
@@ -380,7 +407,7 @@ class Convert
 				break;
 			}
 		}
-		
+
 		while(iter.hasPrevious())
 		{
 			Element ele=iter.previous();
@@ -407,26 +434,9 @@ class Convert
 		}
 		if(superclass!=null)
 		{
-			List<Element>blah2=inherits.elements("inh");
-			ListIterator<Element>iter2=blah2.listIterator(blah2.size());
-			int flag2=0;
-			/*
-			while(iter.hasPrevious())
-			{
-				Element inh_temp=iter.previous();
-				if(inh_temp.attributeValue("p").equals(superclass) && inh_temp.attributeValue("c").equals(id))
-				{
-					flag2=1;
-					break;
-				}
-			}
-			*/
-			if(flag2==0)
-			{
-				Element inh=inherits.addElement("inh");
-				inh.addAttribute("p", superclass);
-				inh.addAttribute("c", id);
-			}
+			Element inh=inherits.addElement("inh");
+			inh.addAttribute("p", superclass);
+			inh.addAttribute("c", id);
 		}
 		String [] implemented_classes=null;
 		int implements_flag=0;
@@ -462,5 +472,10 @@ class Convert
 		else
 			return "notset";
 
+	}
+
+	public static void main(String[] args) throws IOException
+	{
+		fileIterator();
 	}
 }
