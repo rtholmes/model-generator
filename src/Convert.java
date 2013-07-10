@@ -167,6 +167,7 @@ class Convert
 			ce.addAttribute("isExt", isExt);
 		}
 		String superclass=null;
+		
 		for(int i=0;i<temp_next.length;i++)
 		{
 			String word=temp_next[i];
@@ -184,23 +185,54 @@ class Convert
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", superclass);
 				inh.addAttribute("c", id);
-//				if(classDetailsMap.containsKey(superclass))
-//				{
-//					if(classDetailsMap.get(superclass).startsWith("class;"))
-//						getclass(classDetailsMap.get(superclass), classList, inherits);
-//					else
-//						getinterface(classDetailsMap.get(superclass), classList, inherits);
-//				}
-//				else
-//				{
+				if(classDetailsMap.containsKey(superclass))
+				{
+						int flag1=0;
+						String[] temp1=classDetailsMap.get(superclass).split(";");
+						String id1=superclass;
+						String isAbs1="false";
+						String isInt1="false";
+						String isExt1="false";
+						String vis1="notset";
+						if(temp1[2].contains("abstract ")==true)
+						{	
+							isAbs1="true";
+						}
+						String[] temp_next1=temp1[2].split(" ");
+						vis1=getVisibility(temp_next1[0]);
+						List<Element>blah1=classList.elements("ce");
+						ListIterator<Element>iter1=blah1.listIterator(blah1.size());
+						while(iter1.hasPrevious())
+						{
+							Element ele=iter1.previous();
+							if(ele.attributeValue("id").equals(id1))
+								flag1=1;
+						}
+						if(flag1==0)
+						{
+							Element ce=classList.addElement("ce");
+							ce.addAttribute("id", id1);
+							ce.addAttribute("vis", vis1);
+							ce.addAttribute("isAbs", isAbs1);
+							if(classDetailsMap.get(superclass).startsWith("class;"))
+								ce.addAttribute("isInt", isInt1);
+							else
+								ce.addAttribute("isInt", "");
+							ce.addAttribute("isExt", isExt1);
+						}
+						
+							
+				}
+				else
+				{
 					Element ce=classList.addElement("ce");
 					ce.addAttribute("id", superclass);
 					ce.addAttribute("vis", "notset");
 					ce.addAttribute("isAbs", "false");
 					ce.addAttribute("isInt", "false");
 					ce.addAttribute("isExt", "false");
-//				}
-			}
+				}
+		}
 		}
 
 		String [] implemented_classes=null;
@@ -223,6 +255,54 @@ class Convert
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", tempstring);
 				inh.addAttribute("c", id);
+				
+				if(classDetailsMap.containsKey(tempstring))
+				{
+						int flag1=0;
+						String[] temp1=classDetailsMap.get(tempstring).split(";");
+						String id1=tempstring;
+						String isAbs1="false";
+						String isInt1="false";
+						String isExt1="false";
+						String vis1="notset";
+						if(temp1[2].contains("abstract ")==true)
+						{	
+							isAbs1="true";
+						}
+						String[] temp_next1=temp1[2].split(" ");
+						vis1=getVisibility(temp_next1[0]);
+						List<Element>blah1=classList.elements("ce");
+						ListIterator<Element>iter1=blah1.listIterator(blah1.size());
+						while(iter1.hasPrevious())
+						{
+							Element ele=iter1.previous();
+							if(ele.attributeValue("id").equals(id1))
+								flag1=1;
+						}
+						if(flag1==0)
+						{
+							Element ce=classList.addElement("ce");
+							ce.addAttribute("id", id1);
+							ce.addAttribute("vis", vis1);
+							ce.addAttribute("isAbs", isAbs1);
+							if(classDetailsMap.get(tempstring).startsWith("class;"))
+								ce.addAttribute("isInt", isInt1);
+							else
+								ce.addAttribute("isInt", "");
+							ce.addAttribute("isExt", isExt1);
+						}
+						
+							
+				}
+				else
+				{
+					Element ce=classList.addElement("ce");
+					ce.addAttribute("id", tempstring);
+					ce.addAttribute("vis", "notset");
+					ce.addAttribute("isAbs", "false");
+					ce.addAttribute("isInt", "false");
+					ce.addAttribute("isExt", "false");
+				}
 			}
 		}
 	}
@@ -455,6 +535,54 @@ class Convert
 			Element inh=inherits.addElement("inh");
 			inh.addAttribute("p", superclass);
 			inh.addAttribute("c", id);
+			
+			if(classDetailsMap.containsKey(superclass))
+			{
+					int flag1=0;
+					String[] temp1=classDetailsMap.get(superclass).split(";");
+					String id1=superclass;
+					String isAbs1="false";
+					String isInt1="false";
+					String isExt1="false";
+					String vis1="notset";
+					if(temp1[2].contains("abstract ")==true)
+					{	
+						isAbs1="true";
+					}
+					String[] temp_next1=temp1[2].split(" ");
+					vis1=getVisibility(temp_next1[0]);
+					List<Element>blah1=classList.elements("ce");
+					ListIterator<Element>iter1=blah1.listIterator(blah1.size());
+					while(iter1.hasPrevious())
+					{
+						Element ele=iter1.previous();
+						if(ele.attributeValue("id").equals(id1))
+							flag1=1;
+					}
+					if(flag1==0)
+					{
+						Element ce=classList.addElement("ce");
+						ce.addAttribute("id", id1);
+						ce.addAttribute("vis", vis1);
+						ce.addAttribute("isAbs", isAbs1);
+						if(classDetailsMap.get(superclass).startsWith("class;"))
+							ce.addAttribute("isInt", isInt1);
+						else
+							ce.addAttribute("isInt", "");
+						ce.addAttribute("isExt", isExt1);
+					}
+					
+						
+			}
+			else
+			{
+				Element ce=classList.addElement("ce");
+				ce.addAttribute("id", superclass);
+				ce.addAttribute("vis", "notset");
+				ce.addAttribute("isAbs", "false");
+				ce.addAttribute("isInt", "false");
+				ce.addAttribute("isExt", "false");
+			}
 		}
 		String [] implemented_classes=null;
 		int implements_flag=0;
@@ -476,6 +604,54 @@ class Convert
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", tempstring);
 				inh.addAttribute("c", id);
+				
+				if(classDetailsMap.containsKey(tempstring))
+				{
+						int flag1=0;
+						String[] temp1=classDetailsMap.get(tempstring).split(";");
+						String id1=tempstring;
+						String isAbs1="false";
+						String isInt1="false";
+						String isExt1="false";
+						String vis1="notset";
+						if(temp1[2].contains("abstract ")==true)
+						{	
+							isAbs1="true";
+						}
+						String[] temp_next1=temp1[2].split(" ");
+						vis1=getVisibility(temp_next1[0]);
+						List<Element>blah1=classList.elements("ce");
+						ListIterator<Element>iter1=blah1.listIterator(blah1.size());
+						while(iter1.hasPrevious())
+						{
+							Element ele=iter1.previous();
+							if(ele.attributeValue("id").equals(id1))
+								flag1=1;
+						}
+						if(flag1==0)
+						{
+							Element ce=classList.addElement("ce");
+							ce.addAttribute("id", id1);
+							ce.addAttribute("vis", vis1);
+							ce.addAttribute("isAbs", isAbs1);
+							if(classDetailsMap.get(tempstring).startsWith("class;"))
+								ce.addAttribute("isInt", isInt1);
+							else
+								ce.addAttribute("isInt", "");
+							ce.addAttribute("isExt", isExt1);
+						}
+						
+							
+				}
+				else
+				{
+					Element ce=classList.addElement("ce");
+					ce.addAttribute("id", tempstring);
+					ce.addAttribute("vis", "notset");
+					ce.addAttribute("isAbs", "false");
+					ce.addAttribute("isInt", "false");
+					ce.addAttribute("isExt", "false");
+				}
 			}
 		}
 	}
