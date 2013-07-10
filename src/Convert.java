@@ -22,7 +22,7 @@ class Convert
 	public static void fileIterator() throws IOException
 	{
 		getclassDetails();
-		File folder=new File("/home/s23subra/Desktop/maven_data/split_files/");
+		File folder=new File("/home/s23subra/maven_data/split_files/");
 		File[] fileList=folder.listFiles();
 		for(File f:fileList)
 		{
@@ -109,9 +109,9 @@ class Convert
 
 		String fn=ip.getName();
 		count_notset++;
-		if(count_notset%100==0)
+		if(count_notset%50==0)
 			System.out.println(count_notset);
-		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/Desktop/maven_data/xml/"+fn.substring(0, fn.length()-4)+".xml")),format);
+		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/maven_data/xml/"+fn.substring(0, fn.length()-4)+".xml")),format);
 		output.write( main_root);
 		output.close();
 		br.close();
@@ -120,7 +120,7 @@ class Convert
 
 	public static void getclassDetails() throws IOException
 	{
-		File ip=new File("/home/s23subra/Desktop/maven_data/class_file");
+		File ip=new File("/home/s23subra/maven_data/class_file");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
 		String line=null;
 		while((line=br.readLine())!=null)
@@ -184,6 +184,22 @@ class Convert
 				Element inh=inherits.addElement("inh");
 				inh.addAttribute("p", superclass);
 				inh.addAttribute("c", id);
+//				if(classDetailsMap.containsKey(superclass))
+//				{
+//					if(classDetailsMap.get(superclass).startsWith("class;"))
+//						getclass(classDetailsMap.get(superclass), classList, inherits);
+//					else
+//						getinterface(classDetailsMap.get(superclass), classList, inherits);
+//				}
+//				else
+//				{
+					Element ce=classList.addElement("ce");
+					ce.addAttribute("id", superclass);
+					ce.addAttribute("vis", "notset");
+					ce.addAttribute("isAbs", "false");
+					ce.addAttribute("isInt", "false");
+					ce.addAttribute("isExt", "false");
+//				}
 			}
 		}
 
@@ -326,7 +342,7 @@ class Convert
 		if(cname.charAt(temp[2].length()-1)=='{')
 			cname=cname.substring(0, cname.length()-1);
 		String id=cname+'.'+shortname;
-		otherTypes.add(cname);
+		
 		String type="::UnknownType::";
 		String isExt="false";
 		String vis="notset";
@@ -374,6 +390,8 @@ class Convert
 		fe.addAttribute("vis", vis);
 		fe.addAttribute("isExt", isExt);
 		fe.addAttribute("type", type);
+		otherTypes.add(type);
+		otherTypes.add(cname);
 	}
 
 
