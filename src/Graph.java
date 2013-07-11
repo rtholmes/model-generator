@@ -49,6 +49,7 @@ public class Graph
 
 	public static void populate(String fName)
 	{
+		//System.out.println("Processing XML: " + fName);
 		Model2XMLReader xmlrdf = new Model2XMLReader(fName);
 		Model knownModel = xmlrdf.read();
 		_model=knownModel;
@@ -83,15 +84,16 @@ public class Graph
 			File xmlPath = new File("/home/s23subra/maven_data/xml/");
 			File[] fileList = xmlPath.listFiles();
 			int i=0;
-			for(File file : fileList)
+			/*for(File file : fileList)
 			{
 				i++;
 				String fname = file.getAbsolutePath();
-				System.out.println(fname + " : " + i);
+				System.out.println("Processing "+fname + " : " + i);
+				if(fname.equals("/home/s23subra/maven_data/xml/clover.org.apache.xml")==false)
 				populate(fname);
 				//if(i==3)
 					//break;
-			}
+			}*/
 			
 			//###################################################
 			System.out.println("searching.....");
@@ -138,9 +140,6 @@ public class Graph
 			System.out.println(output);
 			
 			//###################################################
-
-
-
 			tx.success();
 		}
 		finally
@@ -187,7 +186,7 @@ public class Graph
 		IndexHits<Node> userNodes  = nodeIndexClass.get("id", ce.getId());
 		if(userNodes.hasNext()==false)
 		{
-			//System.out.println(ce.getId());
+			//System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
 			node.setProperty("exactName", ce.getExactName());
@@ -212,7 +211,10 @@ public class Graph
 			return node;
 		}
 		else
+		{
+			//System.out.println("%%%Existing Node: "+ce.getId());
 			return userNodes.getSingle();
+		}
 	}
 
 	private static Node createAndIndexMethodElement( MethodElement me )
