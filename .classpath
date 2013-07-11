@@ -17,5 +17,6 @@
 	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/neo4j-community-1.9.1/lib/org.apache.servicemix.bundles.jline-0.9.94_1.jar"/>
 	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/neo4j-community-1.9.1/lib/scala-library-2.10.0.jar"/>
 	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/neo4j-community-1.9.1/lib/server-api-1.9.1.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/ca.uwaterloo.cs.se.inconsistency.core"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
