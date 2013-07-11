@@ -405,7 +405,7 @@ class Convert
 		}
 	}
 
-	private static boolean isPrimitive(String trim) {
+	public static boolean isPrimitive(String trim) {
 
 		if(trim.equals("int")==true || trim.equals("float")==true || trim.equals("char")==true || trim.equals("String")==true || trim.equals("boolean")==true || trim.equals("void")==true || trim.equals("int[]")==true || trim.equals("char[]")==true || trim.equals("String[]")==true || trim.equals("float[]")==true || trim.equals("boolean[]")==true || trim.equals("long")==true || trim.equals("long[]")==true || trim.equals("double")==true || trim.equals("double[]")==true || trim.equals("byte")==true || trim.equals("byte[]")==true)
 			return true;
