@@ -53,7 +53,7 @@ public class Graph
 		Model2XMLReader xmlrdf = new Model2XMLReader(fName);
 		Model knownModel = xmlrdf.read();
 		_model=knownModel;
-		
+
 		for ( ClassElement ce : knownModel.getClasses() )
 		{
 			createAndIndexClassElement(ce);
@@ -67,7 +67,7 @@ public class Graph
 			createAndIndexFieldElement(fe);
 		}
 	}
-	
+
 	public static void main( final String[] args )
 	{
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
@@ -76,25 +76,46 @@ public class Graph
 		nodeIndexField = graphDb.index().forNodes( "fields" );
 		registerShutdownHook();
 
-		Transaction tx = graphDb.beginTx();
+
+
+		String fName = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
+		Transaction tx0 = graphDb.beginTx();
 		try
 		{
-			String fName = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
 			populate(fName);
-			File xmlPath = new File("/home/s23subra/maven_data/xml/");
-			File[] fileList = xmlPath.listFiles();
-			int i=0;
-			/*for(File file : fileList)
+			tx0.success();
+		}
+		finally
+		{
+			tx0.finish();
+		}
+		File xmlPath = new File("/home/s23subra/maven_data/xml/");
+		File[] fileList = xmlPath.listFiles();
+		int i=0;
+		for(File file : fileList)
+		{
+			i++;
+			String fname = file.getAbsolutePath();
+			System.out.println("Processing "+fname + " : " + i);
+			Transaction tx1 = graphDb.beginTx();
+			try
 			{
-				i++;
-				String fname = file.getAbsolutePath();
-				System.out.println("Processing "+fname + " : " + i);
 				if(fname.equals("/home/s23subra/maven_data/xml/clover.org.apache.xml")==false)
-				populate(fname);
+					populate(fname);
 				//if(i==3)
-					//break;
-			}*/
-			
+				//break;
+				tx1.success();
+			}
+			finally
+			{
+				tx1.finish();
+			}
+
+		}
+
+		Transaction tx2 = graphDb.beginTx();
+		try
+		{
 			//###################################################
 			System.out.println("searching.....");
 			String idToFind = "java.io.BufferedWriter";
@@ -125,7 +146,7 @@ public class Graph
 			}
 			output += "Number of methods found: " + numberOfSuperTypes + "\n";
 			System.out.println(output);
-			
+
 			output = null;
 			output = foundUser.getProperty("id") + "'s fields:\n";
 			ParentTraverser = getFields( foundUser );
@@ -138,14 +159,15 @@ public class Graph
 			}
 			output += "Number of fields found: " + numberOfSuperTypes + "\n";
 			System.out.println(output);
-			
+
 			//###################################################
-			tx.success();
+			tx2.success();
 		}
 		finally
 		{
-			tx.finish();
+			tx2.finish();
 		}
+
 		shutdown();
 	}
 
@@ -162,7 +184,7 @@ public class Graph
 				.evaluator( Evaluators.excludeStartPosition() );
 		return td.traverse( node );
 	}
-	
+
 	private static Traverser getMethods(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
@@ -171,7 +193,7 @@ public class Graph
 				.evaluator( Evaluators.excludeStartPosition() );
 		return td.traverse( node );
 	}
-	
+
 	private static Traverser getFields(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
@@ -227,20 +249,20 @@ public class Graph
 			node.setProperty( "id", me.getId() );
 			node.setProperty("exactName", me.getExactName());
 			node.setProperty( "vis", me.getVisiblity().toString());
-			
+
 			ClassElement parentClass = _model.getClass(me.extractClassName());
 			insertParameterAndReturn(RelTypes.IS_METHOD,RelTypes.HAS_METHOD, parentClass, node);
-			
+
 			ClassElement returnType = me.getReturnElement().getType();
 			insertParameterAndReturn(RelTypes.RETURN_TYPE, RelTypes.IS_RETURN_TYPE, returnType, node);
-			
+
 			Collection<MethodParamElement> params = me.getParameters();
 			for(MethodParamElement param : params)
 			{
 				ClassElement paramtype = param.getType();
 				insertParameterAndReturn(RelTypes.PARAMETER, RelTypes.IS_PARAMETER, paramtype, node);
 			}
-			
+
 			nodeIndexMethod.add( node, "id", me.getId() );
 			return node;
 		}
@@ -261,11 +283,11 @@ public class Graph
 			node.setProperty( "isPrimitive", "false" );
 			node.setProperty( "isExternal", fe.isExternal() );
 			ClassElement fieldType = fe.getType();
-			
+
 			insertParameterAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
 			ClassElement parentClass = _model.getClass(fe.getExactClassName());
 			insertParameterAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
-			
+
 			nodeIndexField.add( node, "id", fe.getId() );
 			return node;
 		}
@@ -273,7 +295,7 @@ public class Graph
 			return fieldNodes.getSingle();
 	}
 
-	
+
 	private static void insertParameterAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node)
 	{
 		if(type==null)
