@@ -1,19 +1,13 @@
 import java.io.File;
 import java.util.Collection;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
-import org.neo4j.graphdb.traversal.Evaluators;
-import org.neo4j.graphdb.traversal.TraversalDescription;
-import org.neo4j.graphdb.traversal.Traverser;
-import org.neo4j.kernel.Traversal;
 
 import ca.uwaterloo.cs.se.inconsistency.core.model2.ClassElement;
 import ca.uwaterloo.cs.se.inconsistency.core.model2.FieldElement;
@@ -24,12 +18,15 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.io.Model2XMLReader;
 
 public class Graph
 {
-	static Model _model;
+	private static Model _model;
 	private static final String DB_PATH = "neo4j-store";
 	private static GraphDatabaseService graphDb;
 	private static Index<Node> nodeIndexClass;
 	private static Index<Node> nodeIndexMethod;
 	private static Index<Node> nodeIndexField;
+	private static Index<Node> nodeIndexShortField;
+	private static Index<Node> nodeIndexShortMethod;
+	private static Index<Node> nodeIndexShortClass;
 
 	private static enum RelTypes implements RelationshipType
 	{
@@ -74,6 +71,9 @@ public class Graph
 		nodeIndexClass = graphDb.index().forNodes( "classes" );
 		nodeIndexMethod = graphDb.index().forNodes( "methods" );
 		nodeIndexField = graphDb.index().forNodes( "fields" );
+		nodeIndexShortField = graphDb.index().forNodes( "short_fields" );
+		nodeIndexShortMethod = graphDb.index().forNodes( "short_methods" );
+		nodeIndexShortClass = graphDb.index().forNodes( "short_classess" );
 		registerShutdownHook();
 
 
@@ -85,6 +85,7 @@ public class Graph
 			populate(fName);
 			tx0.success();
 		}
+		
 		finally
 		{
 			tx0.finish();
@@ -100,7 +101,7 @@ public class Graph
 			Transaction tx1 = graphDb.beginTx();
 			try
 			{
-				if(fname.equals("/home/s23subra/maven_data/xml/clover.org.apache.xml")==false)
+				if(fname.equals("/home/s23subra/maven_data/xml/clover.org.apache.xml")==false && fname.equals("/home/s23subra/maven_data/xml/org.ow2.bonita.xml")==false)
 					populate(fname);
 				//if(i==3)
 				//break;
@@ -113,61 +114,6 @@ public class Graph
 
 		}
 
-		Transaction tx2 = graphDb.beginTx();
-		try
-		{
-			//###################################################
-			System.out.println("searching.....");
-			String idToFind = "java.io.BufferedWriter";
-			Node foundUser = nodeIndexClass.get( "id", idToFind ).getSingle();
-			String output = foundUser.getProperty("id") + "'s parents:\n";
-			Traverser ParentTraverser = getParents( foundUser );
-			int numberOfSuperTypes=0;
-			for ( Path pathToParent : ParentTraverser )
-			{
-				output += "At depth " + pathToParent.length() + " => "
-						+ pathToParent.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of friends found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-			System.out.println( "The vis of node " + idToFind + " is "	+  foundUser.hasRelationship(RelTypes.PARENT));
-
-
-			output = null;
-			output = foundUser.getProperty("id") + "'s methods:\n";
-			ParentTraverser = getMethods( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path mehods : ParentTraverser )
-			{
-				output += "At depth " + mehods.length() + " => "
-						+ mehods.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of methods found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			output = null;
-			output = foundUser.getProperty("id") + "'s fields:\n";
-			ParentTraverser = getFields( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path fields : ParentTraverser )
-			{
-				output += "At depth " + fields.length() + " => "
-						+ fields.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of fields found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			//###################################################
-			tx2.success();
-		}
-		finally
-		{
-			tx2.finish();
-		}
-
 		shutdown();
 	}
 
@@ -176,32 +122,6 @@ public class Graph
 		graphDb.shutdown();
 	}
 
-	private static Traverser getParents(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARENT, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-
-	private static Traverser getMethods(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-
-	private static Traverser getFields(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_FIELD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
 
 	private static Node createAndIndexClassElement( ClassElement ce )
 	{
@@ -218,6 +138,7 @@ public class Graph
 			node.setProperty( "isInterface", ce.isInterface() );
 			node.setProperty( "isExternal", ce.isExternal() );
 			//node.setProperty("ce", ce);
+			try{
 			Collection<ClassElement> parentsList = ce.getParents();
 			if(parentsList!=null)
 			{
@@ -229,7 +150,13 @@ public class Graph
 				}
 
 			}
+			}
+			catch(StackOverflowError e)
+			{
+				System.out.println("StackOverflowError : "+ ce.getId());
+			}
 			nodeIndexClass.add( node, "id", ce.getId() );
+			nodeIndexShortClass.add(node, "short_name", ce.getExactName());
 			return node;
 		}
 		else
@@ -264,6 +191,7 @@ public class Graph
 			}
 
 			nodeIndexMethod.add( node, "id", me.getId() );
+			nodeIndexShortMethod.add(node, "short_name", me.getExactName());
 			return node;
 		}
 		else
@@ -289,6 +217,7 @@ public class Graph
 			insertParameterAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
 
 			nodeIndexField.add( node, "id", fe.getId() );
+			nodeIndexShortField.add(node, "short_name", fe.getExactName());
 			return node;
 		}
 		else
