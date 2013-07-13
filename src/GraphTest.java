@@ -169,7 +169,6 @@ public class GraphTest
 	
 	private ClassElement getCE(Node node)
 	{
-		ClassElement ce = new ClassElement(node.getProperty("id"), isExternal, isInterface, isAbstract)
 		
 		return null;
 	}
