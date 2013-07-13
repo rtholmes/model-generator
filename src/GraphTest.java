@@ -20,7 +20,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodElement;
 public class GraphTest
 {
 	private static GraphDatabaseService graphDb;
-	private static final String DB_PATH = "neo4j-store-new_indices";
+	private static final String DB_PATH = "neo4j-store";
 	
 	private static enum RelTypes implements RelationshipType
 	{

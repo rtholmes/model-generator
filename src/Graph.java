@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -44,7 +45,7 @@ public class Graph
 		HAS_FIELD_TYPE
 	}
 
-	public static void populate(String fName)
+	public static void populate(String fName) throws IOException
 	{
 		//System.out.println("Processing XML: " + fName);
 		Model2XMLReader xmlrdf = new Model2XMLReader(fName);
@@ -65,7 +66,7 @@ public class Graph
 		}
 	}
 
-	public static void main( final String[] args )
+	public static void main( final String[] args ) throws IOException
 	{
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
 		nodeIndexClass = graphDb.index().forNodes( "classes" );
@@ -78,7 +79,7 @@ public class Graph
 
 
 
-		String fName = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
+		String fName = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
 		Transaction tx0 = graphDb.beginTx();
 		try
 		{
@@ -93,7 +94,7 @@ public class Graph
 		File xmlPath = new File("/home/s23subra/maven_data/xml/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
-		for(File file : fileList)
+		/*for(File file : fileList)
 		{
 			i++;
 			String fname = file.getAbsolutePath();
@@ -112,7 +113,7 @@ public class Graph
 				tx1.finish();
 			}
 
-		}
+		}*/
 
 		shutdown();
 	}
@@ -123,7 +124,7 @@ public class Graph
 	}
 
 
-	private static Node createAndIndexClassElement( ClassElement ce )
+	private static Node createAndIndexClassElement( ClassElement ce ) throws IOException
 	{
 		IndexHits<Node> userNodes  = nodeIndexClass.get("id", ce.getId());
 		if(userNodes.hasNext()==false)
@@ -131,12 +132,13 @@ public class Graph
 			//System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
-			node.setProperty("exactName", ce.getExactName());
-			node.setProperty( "vis", ce.getVisiblity().toString() );
-			node.setProperty( "isAbstract", ce.isAbstract() );
+			//node.setProperty("exactName", ce.getExactName());
+			//node.setProperty( "vis", ce.getVisiblity().toString() );
+			//node.setProperty( "isAbstract", ce.isAbstract() );
 			node.setProperty( "isPrimitive", "false" );
-			node.setProperty( "isInterface", ce.isInterface() );
-			node.setProperty( "isExternal", ce.isExternal() );
+			//node.setProperty( "isInterface", ce.isInterface() );
+			//node.setProperty( "isExternal", ce.isExternal() );
+			node.setProperty("CEByteArray", ce.convertClassElementToByteArray());
 			//node.setProperty("ce", ce);
 			try{
 			Collection<ClassElement> parentsList = ce.getParents();
@@ -166,7 +168,7 @@ public class Graph
 		}
 	}
 
-	private static Node createAndIndexMethodElement( MethodElement me )
+	private static Node createAndIndexMethodElement( MethodElement me ) throws IOException
 	{
 		IndexHits<Node> methodNodes  = nodeIndexMethod.get("id", me.getId());
 		if(methodNodes.hasNext()==false)
@@ -174,9 +176,9 @@ public class Graph
 			//System.out.println(me.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", me.getId() );
-			node.setProperty("exactName", me.getExactName());
-			node.setProperty( "vis", me.getVisiblity().toString());
-
+			//node.setProperty("exactName", me.getExactName());
+			//node.setProperty( "vis", me.getVisiblity().toString());
+			node.setProperty("MEByteArray", me.convertMethodElementToByteArray());
 			ClassElement parentClass = _model.getClass(me.extractClassName());
 			insertParameterAndReturn(RelTypes.IS_METHOD,RelTypes.HAS_METHOD, parentClass, node);
 
@@ -198,7 +200,7 @@ public class Graph
 			return methodNodes.getSingle();
 	}
 
-	private static Node createAndIndexFieldElement( FieldElement fe )
+	private static Node createAndIndexFieldElement( FieldElement fe ) throws IOException
 	{
 		IndexHits<Node> fieldNodes  = nodeIndexField.get("id", fe.getId());
 		if(fieldNodes.hasNext()==false)
@@ -206,12 +208,13 @@ public class Graph
 			//System.out.println(ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", fe.getId() );
-			node.setProperty("exactName", fe.getExactName());
-			node.setProperty( "vis", fe.getVisiblity().toString() );
-			node.setProperty( "isPrimitive", "false" );
-			node.setProperty( "isExternal", fe.isExternal() );
+			//node.setProperty("exactName", fe.getExactName());
+			//node.setProperty( "vis", fe.getVisiblity().toString() );
+			//node.setProperty( "isPrimitive", "false" );
+			//node.setProperty( "isExternal", fe.isExternal() );
+			//node.setProperty("FEByteArray", fe.convertFieldElementToByteArray());
 			ClassElement fieldType = fe.getType();
-
+			
 			insertParameterAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
 			ClassElement parentClass = _model.getClass(fe.getExactClassName());
 			insertParameterAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
@@ -225,7 +228,7 @@ public class Graph
 	}
 
 
-	private static void insertParameterAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node)
+	private static void insertParameterAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node) throws IOException
 	{
 		if(type==null)
 			return; 
@@ -241,12 +244,13 @@ public class Graph
 		{
 			Node primitiveNode = graphDb.createNode();
 			primitiveNode.setProperty( "id", type.getId() );
-			primitiveNode.setProperty("exactName", type.getExactName());
-			primitiveNode.setProperty( "vis", type.getVisiblity().toString() );
-			primitiveNode.setProperty( "isAbstract", type.isAbstract() );
-			primitiveNode.setProperty( "isInterface", type.isInterface() );
-			primitiveNode.setProperty( "isExternal", type.isExternal() );
+			//primitiveNode.setProperty("exactName", type.getExactName());
+			//primitiveNode.setProperty( "vis", type.getVisiblity().toString() );
+			//primitiveNode.setProperty( "isAbstract", type.isAbstract() );
+			//primitiveNode.setProperty( "isInterface", type.isInterface() );
+			//primitiveNode.setProperty( "isExternal", type.isExternal() );
 			primitiveNode.setProperty( "isPrimitive", "true" );
+			primitiveNode.setProperty("CEByteArray", type.convertClassElementToByteArray());
 			node.createRelationshipTo(primitiveNode, outgoing);
 			primitiveNode.createRelationshipTo(node, incoming);
 		}
@@ -254,12 +258,13 @@ public class Graph
 		{
 			Node newReturnNode = graphDb.createNode();
 			newReturnNode.setProperty( "id", type.getId() );
-			newReturnNode.setProperty("exactName", type.getExactName());
-			newReturnNode.setProperty( "vis", type.getVisiblity().toString() );
-			newReturnNode.setProperty( "isAbstract", type.isAbstract() );
-			newReturnNode.setProperty( "isInterface", type.isInterface() );
-			newReturnNode.setProperty( "isExternal", type.isExternal() );
+			//newReturnNode.setProperty("exactName", type.getExactName());
+			//newReturnNode.setProperty( "vis", type.getVisiblity().toString() );
+			//newReturnNode.setProperty( "isAbstract", type.isAbstract() );
+			//newReturnNode.setProperty( "isInterface", type.isInterface() );
+			//newReturnNode.setProperty( "isExternal", type.isExternal() );
 			newReturnNode.setProperty( "isPrimitive", "false" );
+			newReturnNode.setProperty("CEByteArray", type.convertClassElementToByteArray());
 			node.createRelationshipTo(newReturnNode, outgoing);
 			newReturnNode.createRelationshipTo(node, incoming);
 		}
