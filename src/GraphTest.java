@@ -2,6 +2,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -12,10 +13,14 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 
+import ca.uwaterloo.cs.se.inconsistency.core.model2.ClassElement;
+import ca.uwaterloo.cs.se.inconsistency.core.model2.FieldElement;
+import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodElement;
+
 public class GraphTest
 {
 	private static GraphDatabaseService graphDb;
-	private static final String DB_PATH = "neo4j-store";
+	private static final String DB_PATH = "neo4j-store-new_indices";
 	
 	private static enum RelTypes implements RelationshipType
 	{
@@ -90,11 +95,22 @@ public class GraphTest
 
 			//###################################################
 			System.out.println("**************************");
-			IndexHits<Node> iter = smindex.get("short_name", "start");
+			IndexHits<Node> iter = smindex.get("short_name", "close");
 			for(Node temp: iter)
 			{
+				Iterable<Relationship> parent = temp.getRelationships(RelTypes.PARENT);
+				
+				Traverser traverser = getParents(temp);
+				for ( Path node : traverser )
+				{
+					output += "At depth " + node.length() + " => "
+							+ node.endNode().getProperty( "id" ) + "\n";
+					numberOfSuperTypes++;
+				}
 				System.out.println(temp.getProperty("id"));
+				
 			}
+			System.out.println(iter.size()+" methods found");
 			//###################################################
 			tx2.success();
 		}
@@ -149,5 +165,25 @@ public class GraphTest
 				shutdown();
 			}
 		} );
+	}
+	
+	private ClassElement getCE(Node node)
+	{
+		ClassElement ce = new ClassElement(node.getProperty("id"), isExternal, isInterface, isAbstract)
+		
+		return null;
+	}
+	
+	private MethodElement getME(Node node)
+	{
+		
+		
+		return null;
+	}
+	private FieldElement getFE(Node node)
+	{
+		
+		
+		return null;
 	}
 }
