@@ -94,7 +94,7 @@ public class Graph
 		File xmlPath = new File("/home/s23subra/maven_data/xml/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
-		/*for(File file : fileList)
+		for(File file : fileList)
 		{
 			i++;
 			String fname = file.getAbsolutePath();
@@ -113,7 +113,7 @@ public class Graph
 				tx1.finish();
 			}
 
-		}*/
+		}
 
 		shutdown();
 	}
@@ -132,13 +132,13 @@ public class Graph
 			//System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
-			//node.setProperty("exactName", ce.getExactName());
-			//node.setProperty( "vis", ce.getVisiblity().toString() );
-			//node.setProperty( "isAbstract", ce.isAbstract() );
+			node.setProperty("exactName", ce.getExactName());
+			node.setProperty( "vis", ce.getVisiblity().toString() );
+			node.setProperty( "isAbstract", ce.isAbstract() );
 			node.setProperty( "isPrimitive", "false" );
-			//node.setProperty( "isInterface", ce.isInterface() );
-			//node.setProperty( "isExternal", ce.isExternal() );
-			node.setProperty("CEByteArray", ce.convertClassElementToByteArray());
+			node.setProperty( "isInterface", ce.isInterface() );
+			node.setProperty( "isExternal", ce.isExternal() );
+			
 			//node.setProperty("ce", ce);
 			try{
 			Collection<ClassElement> parentsList = ce.getParents();
@@ -153,10 +153,17 @@ public class Graph
 
 			}
 			}
+			//org.apache.http.impl.io.HttpRequestWriter
 			catch(StackOverflowError e)
 			{
 				System.out.println("StackOverflowError : "+ ce.getId());
 			}
+			/*ce.setParentNull();
+			ce.setMethodsNull();
+			ce.setFieldsNull();
+			byte[] array = ce.convertClassElementToByteArray();
+			//System.out.println(ce.getId()+" : "+array.length);
+			node.setProperty("CEByteArray", array);*/
 			nodeIndexClass.add( node, "id", ce.getId() );
 			nodeIndexShortClass.add(node, "short_name", ce.getExactName());
 			return node;
@@ -176,12 +183,12 @@ public class Graph
 			//System.out.println(me.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", me.getId() );
-			//node.setProperty("exactName", me.getExactName());
-			//node.setProperty( "vis", me.getVisiblity().toString());
-			node.setProperty("MEByteArray", me.convertMethodElementToByteArray());
+			node.setProperty("exactName", me.getExactName());
+			node.setProperty( "vis", me.getVisiblity().toString());
+			
 			ClassElement parentClass = _model.getClass(me.extractClassName());
 			insertParameterAndReturn(RelTypes.IS_METHOD,RelTypes.HAS_METHOD, parentClass, node);
-
+			
 			ClassElement returnType = me.getReturnElement().getType();
 			insertParameterAndReturn(RelTypes.RETURN_TYPE, RelTypes.IS_RETURN_TYPE, returnType, node);
 
@@ -191,7 +198,14 @@ public class Graph
 				ClassElement paramtype = param.getType();
 				insertParameterAndReturn(RelTypes.PARAMETER, RelTypes.IS_PARAMETER, paramtype, node);
 			}
-
+			
+			/*me.setCallsNull();
+			me.setReturnNull();
+			me.setParamsNull();
+			me.setReferencesNull();
+			byte[] array = me.convertMethodElementToByteArray();
+			//System.out.println(me.getId()+" : " +array.length);
+			node.setProperty("MEByteArray", array);*/
 			nodeIndexMethod.add( node, "id", me.getId() );
 			nodeIndexShortMethod.add(node, "short_name", me.getExactName());
 			return node;
@@ -208,17 +222,20 @@ public class Graph
 			//System.out.println(ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", fe.getId() );
-			//node.setProperty("exactName", fe.getExactName());
-			//node.setProperty( "vis", fe.getVisiblity().toString() );
-			//node.setProperty( "isPrimitive", "false" );
-			//node.setProperty( "isExternal", fe.isExternal() );
-			//node.setProperty("FEByteArray", fe.convertFieldElementToByteArray());
+			node.setProperty("exactName", fe.getExactName());
+			node.setProperty( "vis", fe.getVisiblity().toString() );
+			node.setProperty( "isPrimitive", "false" );
+			node.setProperty( "isExternal", fe.isExternal() );
+			
 			ClassElement fieldType = fe.getType();
 			
 			insertParameterAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
 			ClassElement parentClass = _model.getClass(fe.getExactClassName());
 			insertParameterAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
-
+			
+			/*byte[] array = fe.convertFieldElementToByteArray();
+			//System.out.println(array.length);
+			node.setProperty("FEByteArray", array);*/
 			nodeIndexField.add( node, "id", fe.getId() );
 			nodeIndexShortField.add(node, "short_name", fe.getExactName());
 			return node;
@@ -244,13 +261,17 @@ public class Graph
 		{
 			Node primitiveNode = graphDb.createNode();
 			primitiveNode.setProperty( "id", type.getId() );
-			//primitiveNode.setProperty("exactName", type.getExactName());
-			//primitiveNode.setProperty( "vis", type.getVisiblity().toString() );
-			//primitiveNode.setProperty( "isAbstract", type.isAbstract() );
-			//primitiveNode.setProperty( "isInterface", type.isInterface() );
-			//primitiveNode.setProperty( "isExternal", type.isExternal() );
+			primitiveNode.setProperty("exactName", type.getExactName());
+			primitiveNode.setProperty( "vis", type.getVisiblity().toString() );
+			primitiveNode.setProperty( "isAbstract", type.isAbstract() );
+			primitiveNode.setProperty( "isInterface", type.isInterface() );
+			primitiveNode.setProperty( "isExternal", type.isExternal() );
 			primitiveNode.setProperty( "isPrimitive", "true" );
-			primitiveNode.setProperty("CEByteArray", type.convertClassElementToByteArray());
+			
+			/*type.setParentNull();
+			type.setMethodsNull();
+			type.setFieldsNull();
+			primitiveNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
 			node.createRelationshipTo(primitiveNode, outgoing);
 			primitiveNode.createRelationshipTo(node, incoming);
 		}
@@ -258,13 +279,16 @@ public class Graph
 		{
 			Node newReturnNode = graphDb.createNode();
 			newReturnNode.setProperty( "id", type.getId() );
-			//newReturnNode.setProperty("exactName", type.getExactName());
-			//newReturnNode.setProperty( "vis", type.getVisiblity().toString() );
-			//newReturnNode.setProperty( "isAbstract", type.isAbstract() );
-			//newReturnNode.setProperty( "isInterface", type.isInterface() );
-			//newReturnNode.setProperty( "isExternal", type.isExternal() );
+			newReturnNode.setProperty("exactName", type.getExactName());
+			newReturnNode.setProperty( "vis", type.getVisiblity().toString() );
+			newReturnNode.setProperty( "isAbstract", type.isAbstract() );
+			newReturnNode.setProperty( "isInterface", type.isInterface() );
+			newReturnNode.setProperty( "isExternal", type.isExternal() );
 			newReturnNode.setProperty( "isPrimitive", "false" );
-			newReturnNode.setProperty("CEByteArray", type.convertClassElementToByteArray());
+			/*type.setParentNull();
+			type.setMethodsNull();
+			type.setFieldsNull();
+			newReturnNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
 			node.createRelationshipTo(newReturnNode, outgoing);
 			newReturnNode.createRelationshipTo(node, incoming);
 		}
