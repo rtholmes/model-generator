@@ -20,7 +20,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.io.Model2XMLReader;
 public class Graph
 {
 	private static Model _model;
-	private static final String DB_PATH = "neo4j-store";
+	private static final String DB_PATH = "neo4j-store-new_indices";
 	private static GraphDatabaseService graphDb;
 	private static Index<Node> nodeIndexClass;
 	private static Index<Node> nodeIndexMethod;
@@ -91,7 +91,7 @@ public class Graph
 		{
 			tx0.finish();
 		}
-		File xmlPath = new File("/home/s23subra/maven_data/xml/");
+		/*File xmlPath = new File("/home/s23subra/maven_data/xml/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
 		for(File file : fileList)
@@ -113,7 +113,7 @@ public class Graph
 				tx1.finish();
 			}
 
-		}
+		}*/
 
 		shutdown();
 	}
@@ -129,7 +129,7 @@ public class Graph
 		IndexHits<Node> userNodes  = nodeIndexClass.get("id", ce.getId());
 		if(userNodes.hasNext()==false)
 		{
-			//System.out.println("###New Node: "+ce.getId());
+			System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
 			node.setProperty("exactName", ce.getExactName());
@@ -180,7 +180,7 @@ public class Graph
 		IndexHits<Node> methodNodes  = nodeIndexMethod.get("id", me.getId());
 		if(methodNodes.hasNext()==false)
 		{
-			//System.out.println(me.getId());
+			System.out.println(me.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", me.getId() );
 			node.setProperty("exactName", me.getExactName());

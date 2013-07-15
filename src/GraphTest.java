@@ -50,7 +50,230 @@ public class GraphTest
 		HAS_FIELD_TYPE
 	}
 	
-/*	public ClassElement convertByteArrayToClassElement(byte[] yourBytes) throws IOException, ClassNotFoundException
+
+	public static void main(String[] args)
+	{
+		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+		classIndex = graphDb.index().forNodes("classes");
+		methodIndex = graphDb.index().forNodes("methods");
+		fieldIndex = graphDb.index().forNodes("fields");
+		
+		shortClassIndex = graphDb.index().forNodes("short_classess");
+		shortMethodIndex = graphDb.index().forNodes("short_methods");
+		shortFieldIndex = graphDb.index().forNodes("short_fields");
+		registerShutdownHook();
+		
+		Transaction tx2 = graphDb.beginTx();
+		try
+		{
+			System.out.println("searching.....");
+			String idToFind = "java.lang.Integer";
+			Node foundUser = classIndex.get( "id", idToFind ).getSingle();
+			
+			String output = foundUser.getProperty("id") + "'s parents:\n";
+			Traverser ParentTraverser = getParents( foundUser );
+			int numberOfSuperTypes=0;
+			for ( Path pathToParent : ParentTraverser )
+			{
+				output += "At depth " + pathToParent.length() + ", visibility : "+pathToParent.endNode().getProperty("vis")+"=> "+ pathToParent.endNode().getProperty( "id" ) + "\n";
+				numberOfSuperTypes++;
+			}
+			output += "Number of friends found: " + numberOfSuperTypes + "\n";
+			System.out.println(output);
+
+			output = null;
+			output = foundUser.getProperty("id") + "'s methods:\n";
+			ParentTraverser = getMethods( foundUser );
+			numberOfSuperTypes=0;
+			for ( Path methods : ParentTraverser )
+			{
+				output += "At depth " + methods.length() + " => "+ methods.endNode().getProperty( "id" ) + ":" + methods.endNode().getProperty("vis")+ "\n";
+				numberOfSuperTypes++;
+			}
+			output += "Number of methods found: " + numberOfSuperTypes + "\n";
+			System.out.println(output);
+
+			output = null;
+			output = foundUser.getProperty("id") + "'s fields:\n";
+			ParentTraverser = getFields( foundUser );
+			numberOfSuperTypes=0;
+			for ( Path fields : ParentTraverser )
+			{
+				output += "At depth " + fields.length() + " => "+ fields.endNode().getProperty( "id" ) + "\n";
+				numberOfSuperTypes++;
+			}
+			output += "Number of fields found: " + numberOfSuperTypes + "\n";
+			System.out.println(output);
+
+			System.out.println("**************************");
+			
+			IndexHits<Node> iter = shortMethodIndex.get("short_name", "println");
+			for(Node temp: iter)
+			{
+				System.out.println(temp.getProperty("id"));
+				Traverser traverser = getParentClass(temp);
+				for ( Path node : traverser )
+				{
+					output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
+					System.out.println(output);
+				}
+			}
+			System.out.println(iter.size()+" methods found");
+			
+			System.out.println("**************************");
+			
+			iter = shortClassIndex.get("short_name", "Integer");
+			for(Node temp: iter)
+			{
+				System.out.println(temp.getProperty("id"));
+				Traverser traverser = getParents(temp);
+				for ( Path node : traverser )
+				{
+					output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
+					System.out.println(output);
+				}
+			}
+			System.out.println(iter.size()+" classes found");	
+			
+			
+			tx2.success();
+		}
+		finally
+		{
+			tx2.finish();
+		}
+
+		shutdown();
+	}
+
+	
+	private HashSet<Node> getMethodNodes(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser methodTraverser = td.traverse( node );
+		HashSet<Node> methodsCollection = new HashSet<Node>();;
+		for ( Path methods : methodTraverser )
+		{
+			if(methods.length()==1)
+			{
+				methodsCollection.add(methods.endNode());
+			}
+		}
+		return methodsCollection;
+	}
+	
+	private Node getMethodContainer(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser traverser = td.traverse( node );
+		Node container = null;
+		for ( Path containerNode : traverser )
+		{
+			if(containerNode.length()==1)
+			{
+				container = containerNode.endNode();
+			}
+		}
+		return container;
+	}
+	private Node getMethodReturn(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.RETURN_TYPE, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser traverser = td.traverse( node );
+		Node container = null;
+		for ( Path containerNode : traverser )
+		{
+			if(containerNode.length()==1)
+			{
+				container = containerNode.endNode();
+			}
+		}
+		return container;
+	}
+	private Collection<Node> getMethodParams(Node node) 
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser traverser = td.traverse( node );
+		Collection<Node> paramNodesCollection = new HashSet<Node>();
+		for ( Path paramNode : traverser )
+		{
+			if(paramNode.length()==1)
+			{
+				paramNodesCollection.add(paramNode.endNode());
+			}
+		}
+		return paramNodesCollection;
+	}
+	
+	private static Traverser getParents(final Node node )
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		return td.traverse( node );
+	}
+	
+	private static Traverser getParentClass(final Node node )
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		return td.traverse( node );
+	}
+
+	private static Traverser getMethods(final Node node )
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		return td.traverse( node );
+	}
+
+	private static Traverser getFields(final Node node )
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.HAS_FIELD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		return td.traverse( node );
+	}
+	
+	private static void shutdown()
+	{
+		graphDb.shutdown();
+	}
+	
+	private static void registerShutdownHook()
+	{
+		// Registers a shutdown hook for the Neo4j and index service instances
+		// so that it shuts down nicely when the VM exits (even if you
+		// "Ctrl-C" the running example before it's completed)
+		Runtime.getRuntime().addShutdownHook( new Thread()
+		{
+			@Override
+			public void run()
+			{
+				shutdown();
+			}
+		} );
+	}
+	
+	/*	public ClassElement convertByteArrayToClassElement(byte[] yourBytes) throws IOException, ClassNotFoundException
 	{
 		ByteArrayInputStream bis = new ByteArrayInputStream(yourBytes);
 		ObjectInput in = null;
@@ -102,88 +325,6 @@ public class GraphTest
 		  in.close();
 		}
 		return me;
-	}
-	
-*/	
-	public static void main(String[] args)
-	{
-		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
-		classIndex = graphDb.index().forNodes("classes");
-		methodIndex = graphDb.index().forNodes("methods");
-		fieldIndex = graphDb.index().forNodes("fields");
-		
-		shortClassIndex = graphDb.index().forNodes("short_classess");
-		shortMethodIndex = graphDb.index().forNodes("short_methods");
-		shortFieldIndex = graphDb.index().forNodes("short_fields");
-		registerShutdownHook();
-		
-		Transaction tx2 = graphDb.beginTx();
-		try
-		{
-			System.out.println("searching.....");
-			String idToFind = "java.lang.Integer";
-			Node foundUser = classIndex.get( "id", idToFind ).getSingle();
-			
-			String output = foundUser.getProperty("id") + "'s parents:\n";
-			Traverser ParentTraverser = getParents( foundUser );
-			int numberOfSuperTypes=0;
-			for ( Path pathToParent : ParentTraverser )
-			{
-				output += "At depth " + pathToParent.length() + " => "+ pathToParent.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of friends found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			output = null;
-			output = foundUser.getProperty("id") + "'s methods:\n";
-			ParentTraverser = getMethods( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path methods : ParentTraverser )
-			{
-				output += "At depth " + methods.length() + " => "+ methods.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of methods found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			output = null;
-			output = foundUser.getProperty("id") + "'s fields:\n";
-			ParentTraverser = getFields( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path fields : ParentTraverser )
-			{
-				output += "At depth " + fields.length() + " => "+ fields.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of fields found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			System.out.println("**************************");
-			
-			IndexHits<Node> iter = shortClassIndex.get("short_name", "String");
-			for(Node temp: iter)
-			{
-				System.out.println(temp.getProperty("id"));
-				Traverser traverser = getParentClass(temp);
-				for ( Path node : traverser )
-				{
-					output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
-					numberOfSuperTypes++;
-					System.out.println(output);
-				}
-			}
-			System.out.println(iter.size()+" methods found");
-			
-			
-			tx2.success();
-		}
-		finally
-		{
-			tx2.finish();
-		}
-
-		shutdown();
 	}
 	
 	public static Collection<ClassElement> getCandidateClasses(String className) 
@@ -292,131 +433,6 @@ public class GraphTest
 		}
 		me.setParams(paramElementsList);
 		return me;
-	}
-	
-	private static HashSet<Node> getMethodNodes(Node node)
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser methodTraverser = td.traverse( node );
-		HashSet<Node> methodsCollection = new HashSet<Node>();;
-		for ( Path methods : methodTraverser )
-		{
-			if(methods.length()==1)
-			{
-				methodsCollection.add(methods.endNode());
-			}
-		}
-		return methodsCollection;
-	}
-	
-	private static Node getMethodContainer(Node node)
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Node container = null;
-		for ( Path containerNode : traverser )
-		{
-			if(containerNode.length()==1)
-			{
-				container = containerNode.endNode();
-			}
-		}
-		return container;
-	}
-	private static Node getMethodReturn(Node node)
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.RETURN_TYPE, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Node container = null;
-		for ( Path containerNode : traverser )
-		{
-			if(containerNode.length()==1)
-			{
-				container = containerNode.endNode();
-			}
-		}
-		return container;
-	}
-	private static Collection<Node> getMethodParams(Node node) 
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Collection<Node> paramNodesCollection = new HashSet<Node>();
-		for ( Path paramNode : traverser )
-		{
-			if(paramNode.length()==1)
-			{
-				paramNodesCollection.add(paramNode.endNode());
-			}
-		}
-		return paramNodesCollection;
-	}
-	
-	
-	private static void shutdown()
-	{
-		graphDb.shutdown();
-	}
-	private static Traverser getParents(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARENT, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-	
-	private static Traverser getParentClass(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-
-	private static Traverser getMethods(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-
-	private static Traverser getFields(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_FIELD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-	private static void registerShutdownHook()
-	{
-		// Registers a shutdown hook for the Neo4j and index service instances
-		// so that it shuts down nicely when the VM exits (even if you
-		// "Ctrl-C" the running example before it's completed)
-		Runtime.getRuntime().addShutdownHook( new Thread()
-		{
-			@Override
-			public void run()
-			{
-				shutdown();
-			}
-		} );
-	}
+	}*/
 	
 }
