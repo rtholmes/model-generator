@@ -122,7 +122,7 @@ public class GraphTest
 			
 			System.out.println("**************************");
 			
-			iter = shortClassIndex.get("short_name", "Integer");
+			iter = shortClassIndex.get("short_name", "GZIPInputStream");
 			for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));
