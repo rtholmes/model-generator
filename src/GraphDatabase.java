@@ -174,6 +174,23 @@ public class GraphDatabase
 		return me;
 	}
 	*/
+	
+	public HashSet<String> getClassChildernNodes(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.CHILD, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser childTraverser = td.traverse( node );
+		HashSet<String> childCollection = new HashSet<String>();;
+		for ( Path child : childTraverser )
+		{
+				if(child.endNode()!=null)
+					childCollection.add((String) child.endNode().getProperty("id"));
+		}
+		return childCollection;
+	}
+	
 	public HashSet<Node> getMethodNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()

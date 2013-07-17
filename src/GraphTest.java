@@ -107,7 +107,7 @@ public class GraphTest
 
 			System.out.println("**************************");
 			
-			IndexHits<Node> iter = shortMethodIndex.get("short_name", "println");
+			IndexHits<Node> iter = shortMethodIndex.get("short_name", "formatNameForProtocol");
 			for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));
