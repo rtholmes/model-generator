@@ -18,7 +18,7 @@ public class Splitter
 		File new_file=null;
 		if(nametokens.length>split_length)
 		{
-			String name="/home/s23subra/maven_data/split_files/";
+			String name="/home/s23subra/new_maven_data/split_files/";
 			int i=0;
 			for(String s: nametokens)
 			{
@@ -32,12 +32,12 @@ public class Splitter
 				
 			}
 			String file_name=name.substring(0, name.length()-1)+".txt";
-			if(file_name.equals("home/s23subra/maven_data/split_files/.txt"))
-				file_name="home/s23subra/maven_data/split_files/general.txt";
+			if(file_name.equals("home/s23subra/new_maven_data/split_files/.txt"))
+				file_name="home/s23subra/new_maven_data/split_files/general.txt";
 			new_file= new File(file_name);
 		}
 		else
-			new_file = new File("/home/s23subra/maven_data/split_files/"+"general.txt");
+			new_file = new File("/home/s23subra/new_maven_data/split_files/"+"general.txt");
 		
 		if(semicolonbreak[1].contains("$")==true)
 		{
@@ -58,7 +58,7 @@ public class Splitter
 		File new_file=null;
 		if(nametokens.length>split_length)
 		{
-			String name="/home/s23subra/maven_data/split_files/";
+			String name="/home/s23subra/new_maven_data/split_files/";
 			int i=0;
 			for(String s: nametokens)
 			{
@@ -75,7 +75,7 @@ public class Splitter
 			new_file= new File(file_name);
 		}
 		else
-			new_file = new File("/home/s23subra/maven_data/split_files/"+"general.txt");
+			new_file = new File("/home/s23subra/new_maven_data/split_files/"+"general.txt");
 
 		if(semicolonbreak[1].contains("$")==true)
 		{
@@ -97,7 +97,7 @@ public class Splitter
 
 		if(nametokens.length>split_length)
 		{
-			String name="/home/s23subra/maven_data/split_files/";
+			String name="/home/s23subra/new_maven_data/split_files/";
 			int i=0;
 			for(String s: nametokens)
 			{
@@ -114,7 +114,7 @@ public class Splitter
 			new_file= new File(file_name);
 		}
 		else
-			new_file = new File("/home/s23subra/maven_data/split_files/"+"general.txt");
+			new_file = new File("/home/s23subra/new_maven_data/split_files/"+"general.txt");
 
 		if(semicolonbreak[1].contains("access$"))
 		{
@@ -145,7 +145,7 @@ public class Splitter
 
 		if(nametokens.length>split_length)
 		{
-			String name="/home/s23subra/maven_data/split_files/";
+			String name="/home/s23subra/new_maven_data/split_files/";
 			int i=0;
 			for(String s: nametokens)
 			{
@@ -162,7 +162,7 @@ public class Splitter
 			new_file= new File(file_name);
 		}
 		else
-			new_file = new File("/home/s23subra/maven_data/split_files/"+"general.txt");
+			new_file = new File("/home/s23subra/new_maven_data/split_files/"+"general.txt");
 
 		if(semicolonbreak[1].contains("this$"))
 		{
@@ -188,7 +188,7 @@ public class Splitter
 	public static void main(String args[]) throws IOException
 	{
 
-		File ip=new File("/home/s23subra/maven_data/parts.unique");
+		File ip=new File("/home/s23subra/new_maven_data/all.sorted.unique");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
 		String line=null;
 		int count=0;
@@ -203,7 +203,7 @@ public class Splitter
 				if(line.startsWith("class;"))
 				{
 					//new_file=getFileForClass(line);
-					new_file=new File("/home/s23subra/maven_data/class_file");
+					new_file=new File("/home/s23subra/new_maven_data/class_file");
 				}
 				else if(line.startsWith("method;"))
 				{
@@ -216,7 +216,7 @@ public class Splitter
 				else if(line.startsWith("interface;"))
 				{
 					//new_file=getFileForInterface(line);
-					new_file=new File("/home/s23subra/maven_data/class_file");
+					new_file=new File("/home/s23subra/new_maven_data/class_file");
 				}
 				if(new_file!=null)
 					names.add(new_file.getAbsolutePath());

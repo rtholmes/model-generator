@@ -1,5 +1,7 @@
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -175,7 +177,40 @@ public class GraphDatabase
 	}
 	*/
 	
-	public HashSet<String> getClassChildernNodes(Node node)
+	public boolean checkIfParentNode(Node parentNode, String childId)
+	{
+		Collection<Node> candidateChildren = new HashSet<Node>();
+		if(childId.contains(".")==false)
+		{
+			candidateChildren.addAll(getCandidateClassNodes(childId));
+		}
+		else
+		{
+			Node candidate = classIndex.get("id", childId).getSingle();
+			candidateChildren.add(candidate);
+		}
+		for(Node child : candidateChildren)
+		{
+			TraversalDescription td = Traversal.description()
+					.breadthFirst()
+					.relationships( RelTypes.PARENT, Direction.OUTGOING )
+					.evaluator( Evaluators.excludeStartPosition() );
+			Traverser traverser = td.traverse( child );
+			
+			for ( Path parentPath : traverser )
+			{
+					if(parentPath.endNode().getProperty("id").equals(parentNode.getProperty("id")))
+					{
+						System.out.println("isParent");
+						return true;
+					}
+			}
+		}
+		System.out.println("isNotParent");
+		return false;
+	}
+	
+	public HashSet<String> getClassChildrenNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
@@ -251,14 +286,21 @@ public class GraphDatabase
 		}
 		return container;
 	}
-	public Collection<Node> getMethodParams(Node node) 
+	public TreeSet<Node> getMethodParams(Node node) 
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
 				.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
 				.evaluator( Evaluators.excludeStartPosition() );
 		Traverser traverser = td.traverse( node );
-		Collection<Node> paramNodesCollection = new HashSet<Node>();
+		TreeSet<Node> paramNodesCollection = new TreeSet<Node>(new Comparator<Node>(){
+			public int compare(Node a, Node b)
+			{
+				return (Integer)a.getProperty("paramIndex")-(Integer)b.getProperty("paramIndex");
+			}
+			
+		});
+		
 		for ( Path paramNode : traverser )
 		{
 			if(paramNode.length()==1)

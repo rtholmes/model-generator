@@ -7,6 +7,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -26,7 +27,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodReturnElement;
 public class GraphTest
 {
 	private static GraphDatabaseService graphDb;
-	private static final String DB_PATH = "neo4j-store-new_indices";
+	private static final String DB_PATH = "neo4j-store-new_rln";
 	public static Index<Node> classIndex ;
 	public static Index<Node> methodIndex ;
 	public static Index<Node> fieldIndex ;
@@ -67,7 +68,7 @@ public class GraphTest
 		try
 		{
 			System.out.println("searching.....");
-			String idToFind = "java.lang.Integer";
+			String idToFind = "java.lang.String";
 			Node foundUser = classIndex.get( "id", idToFind ).getSingle();
 			
 			String output = foundUser.getProperty("id") + "'s parents:\n";
@@ -87,13 +88,19 @@ public class GraphTest
 			numberOfSuperTypes=0;
 			for ( Path methods : ParentTraverser )
 			{
-				output += "At depth " + methods.length() + " => "+ methods.endNode().getProperty( "id" ) + ":" + methods.endNode().getProperty("vis")+ "\n";
+				output = "At depth " + methods.length() + " => "+ methods.endNode().getProperty( "id" ) + ":" + methods.endNode().getProperty("vis")+ "\n";
+				Iterable<Relationship> relations = methods.endNode().getRelationships(Direction.OUTGOING, RelTypes.PARAMETER);
+				for(Relationship rln: relations)
+				{
+					System.out.println((String)rln.getEndNode().getProperty("id")+rln.getEndNode().getProperty("paramIndex")+"*****");
+				}
+				System.out.println(output);
 				numberOfSuperTypes++;
 			}
 			output += "Number of methods found: " + numberOfSuperTypes + "\n";
 			System.out.println(output);
 
-			output = null;
+			/*output = null;
 			output = foundUser.getProperty("id") + "'s fields:\n";
 			ParentTraverser = getFields( foundUser );
 			numberOfSuperTypes=0;
@@ -103,12 +110,12 @@ public class GraphTest
 				numberOfSuperTypes++;
 			}
 			output += "Number of fields found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
+			System.out.println(output);*/
 
 			System.out.println("**************************");
 			
-			IndexHits<Node> iter = shortMethodIndex.get("short_name", "formatNameForProtocol");
-			for(Node temp: iter)
+			IndexHits<Node> iter = shortMethodIndex.get("short_name", "substring");
+			/*for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));
 				Traverser traverser = getParentClass(temp);
@@ -118,11 +125,11 @@ public class GraphTest
 					System.out.println(output);
 				}
 			}
-			System.out.println(iter.size()+" methods found");
+			System.out.println(iter.size()+" methods found");*/
 			
-			System.out.println("**************************");
+			//System.out.println("**************************");
 			
-			iter = shortClassIndex.get("short_name", "GZIPInputStream");
+			iter = shortClassIndex.get("short_name", "FileInputStream");
 			for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));

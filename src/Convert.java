@@ -22,7 +22,7 @@ class Convert
 	public static void fileIterator() throws IOException
 	{
 		getclassDetails();
-		File folder=new File("/home/s23subra/maven_data/split_files/");
+		File folder=new File("/home/s23subra/new_maven_data/split_files/");
 		File[] fileList=folder.listFiles();
 		for(File f:fileList)
 		{
@@ -111,7 +111,7 @@ class Convert
 		count_notset++;
 		if(count_notset%50==0)
 			System.out.println(count_notset);
-		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/maven_data/xml/"+fn.substring(0, fn.length()-4)+".xml")),format);
+		XMLWriter output = new XMLWriter(new FileWriter(new File("/home/s23subra/new_maven_data/xml/"+fn.substring(0, fn.length()-4)+".xml")),format);
 		output.write( main_root);
 		output.close();
 		br.close();
@@ -120,7 +120,7 @@ class Convert
 
 	public static void getclassDetails() throws IOException
 	{
-		File ip=new File("/home/s23subra/maven_data/class_file");
+		File ip=new File("/home/s23subra/new_maven_data/class_file");
 		BufferedReader br=new BufferedReader(new FileReader(ip));
 		String line=null;
 		while((line=br.readLine())!=null)

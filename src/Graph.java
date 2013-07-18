@@ -2,8 +2,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -20,7 +22,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.io.Model2XMLReader;
 public class Graph
 {
 	private static Model _model;
-	private static final String DB_PATH = "neo4j-store-new_indices";
+	private static final String DB_PATH = "neo4j-store-new_rln";
 	private static GraphDatabaseService graphDb;
 	private static Index<Node> nodeIndexClass;
 	private static Index<Node> nodeIndexMethod;
@@ -79,11 +81,13 @@ public class Graph
 
 
 
-		String fName = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
+		String fName1 = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
+		String fName2 = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
 		Transaction tx0 = graphDb.beginTx();
 		try
 		{
-			populate(fName);
+			populate(fName1);
+			populate(fName2);
 			tx0.success();
 		}
 		
@@ -91,7 +95,7 @@ public class Graph
 		{
 			tx0.finish();
 		}
-		/*File xmlPath = new File("/home/s23subra/maven_data/xml/");
+		File xmlPath = new File("/home/s23subra/maven_data/xml/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
 		for(File file : fileList)
@@ -113,7 +117,7 @@ public class Graph
 				tx1.finish();
 			}
 
-		}*/
+		}
 
 		shutdown();
 	}
@@ -129,7 +133,7 @@ public class Graph
 		IndexHits<Node> userNodes  = nodeIndexClass.get("id", ce.getId());
 		if(userNodes.hasNext()==false)
 		{
-			System.out.println("###New Node: "+ce.getId());
+			//System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
 			node.setProperty("exactName", ce.getExactName());
@@ -180,7 +184,7 @@ public class Graph
 		IndexHits<Node> methodNodes  = nodeIndexMethod.get("id", me.getId());
 		if(methodNodes.hasNext()==false)
 		{
-			System.out.println(me.getId());
+			//System.out.println(me.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", me.getId() );
 			node.setProperty("exactName", me.getExactName());
@@ -192,11 +196,14 @@ public class Graph
 			ClassElement returnType = me.getReturnElement().getType();
 			insertParameterAndReturn(RelTypes.RETURN_TYPE, RelTypes.IS_RETURN_TYPE, returnType, node);
 
+			node.setProperty("argCount", me.getParameters().size());
 			Collection<MethodParamElement> params = me.getParameters();
+			int i=0;
 			for(MethodParamElement param : params)
 			{
+				i++;
 				ClassElement paramtype = param.getType();
-				insertParameterAndReturn(RelTypes.PARAMETER, RelTypes.IS_PARAMETER, paramtype, node);
+				insertParameter(RelTypes.PARAMETER, RelTypes.IS_PARAMETER, paramtype, node, i);
 			}
 			
 			/*me.setCallsNull();
@@ -244,20 +251,61 @@ public class Graph
 			return fieldNodes.getSingle();
 	}
 
-
 	private static void insertParameterAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node) throws IOException
+	{
+		 if(type==null)
+             return; 
+     //System.out.println(type.getId());
+     IndexHits<Node> returnNode = nodeIndexClass.get("id", type.getId());
+     if(returnNode.hasNext())
+     {
+             Node returnTypeNode = returnNode.getSingle();
+             node.createRelationshipTo(returnTypeNode, outgoing);
+             returnTypeNode.createRelationshipTo(node, incoming);
+     }
+     else if(Convert.isPrimitive(type.getId()))
+     {
+             Node primitiveNode = graphDb.createNode();
+             primitiveNode.setProperty( "id", type.getId() );
+             primitiveNode.setProperty("exactName", type.getExactName());
+             primitiveNode.setProperty( "vis", type.getVisiblity().toString() );
+             primitiveNode.setProperty( "isAbstract", type.isAbstract() );
+             primitiveNode.setProperty( "isInterface", type.isInterface() );
+             primitiveNode.setProperty( "isExternal", type.isExternal() );
+             primitiveNode.setProperty( "isPrimitive", "true" );
+             
+             /*type.setParentNull();
+             type.setMethodsNull();
+             type.setFieldsNull();
+             primitiveNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
+             node.createRelationshipTo(primitiveNode, outgoing);
+             primitiveNode.createRelationshipTo(node, incoming);
+     }
+     else
+     {
+             Node newReturnNode = graphDb.createNode();
+             newReturnNode.setProperty( "id", type.getId() );
+             newReturnNode.setProperty("exactName", type.getExactName());
+             newReturnNode.setProperty( "vis", type.getVisiblity().toString() );
+             newReturnNode.setProperty( "isAbstract", type.isAbstract() );
+             newReturnNode.setProperty( "isInterface", type.isInterface() );
+             newReturnNode.setProperty( "isExternal", type.isExternal() );
+             newReturnNode.setProperty( "isPrimitive", "false" );
+             /*type.setParentNull();
+             type.setMethodsNull();
+             type.setFieldsNull();
+             newReturnNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
+             node.createRelationshipTo(newReturnNode, outgoing);
+             newReturnNode.createRelationshipTo(node, incoming);
+     }
+	}
+
+	private static void insertParameter(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node, int paramIndex) throws IOException
 	{
 		if(type==null)
 			return; 
 		//System.out.println(type.getId());
-		IndexHits<Node> returnNode = nodeIndexClass.get("id", type.getId());
-		if(returnNode.hasNext())
-		{
-			Node returnTypeNode = returnNode.getSingle();
-			node.createRelationshipTo(returnTypeNode, outgoing);
-			returnTypeNode.createRelationshipTo(node, incoming);
-		}
-		else if(Convert.isPrimitive(type.getId()))
+		if(Convert.isPrimitive(type.getId()))
 		{
 			Node primitiveNode = graphDb.createNode();
 			primitiveNode.setProperty( "id", type.getId() );
@@ -268,12 +316,12 @@ public class Graph
 			primitiveNode.setProperty( "isExternal", type.isExternal() );
 			primitiveNode.setProperty( "isPrimitive", "true" );
 			
+			primitiveNode.setProperty("paramIndex", paramIndex);
 			/*type.setParentNull();
 			type.setMethodsNull();
 			type.setFieldsNull();
 			primitiveNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
-			node.createRelationshipTo(primitiveNode, outgoing);
-			primitiveNode.createRelationshipTo(node, incoming);
+			node.createRelationshipTo(primitiveNode, outgoing).setProperty("count",0);
 		}
 		else
 		{
@@ -289,8 +337,8 @@ public class Graph
 			type.setMethodsNull();
 			type.setFieldsNull();
 			newReturnNode.setProperty("CEByteArray", type.convertClassElementToByteArray());*/
-			node.createRelationshipTo(newReturnNode, outgoing);
-			newReturnNode.createRelationshipTo(node, incoming);
+			newReturnNode.setProperty("paramIndex", paramIndex);
+			node.createRelationshipTo(newReturnNode, outgoing).setProperty("count",0);
 		}
 	}
 
