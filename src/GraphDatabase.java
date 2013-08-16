@@ -16,6 +16,7 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 
+
 public class GraphDatabase
 {
 	private static GraphDatabaseService graphDb;
@@ -54,7 +55,7 @@ public class GraphDatabase
 		methodIndex = graphDb.index().forNodes("methods");
 		fieldIndex = graphDb.index().forNodes("fields");
 		
-		shortClassIndex = graphDb.index().forNodes("short_classess");
+		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		shortFieldIndex = graphDb.index().forNodes("short_fields");
 		
@@ -201,12 +202,12 @@ public class GraphDatabase
 			{
 					if(parentPath.endNode().getProperty("id").equals(parentNode.getProperty("id")))
 					{
-						System.out.println("isParent");
+						//System.out.println("isParent");
 						return true;
 					}
 			}
 		}
-		System.out.println("isNotParent");
+		//System.out.println("isNotParent");
 		return false;
 	}
 	
@@ -348,6 +349,21 @@ public class GraphDatabase
 			}
 		}
 		return answer;
+	}
+	public static HashSet<Node> getParents(final Node node )
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		HashSet<Node> returnSet = new HashSet<Node>();
+		
+		Traverser ParentTraverser = td.traverse(node);
+		for ( Path pathToParent : ParentTraverser )
+		{
+			returnSet.add(pathToParent.endNode());
+		}
+		return returnSet;
 	}
 
 }

@@ -1,11 +1,10 @@
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Iterator;
 
-import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -22,7 +21,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.io.Model2XMLReader;
 public class Graph
 {
 	private static Model _model;
-	private static final String DB_PATH = "neo4j-store-new_rln";
+	private static final String DB_PATH = "maven-graph-database";
 	private static GraphDatabaseService graphDb;
 	private static Index<Node> nodeIndexClass;
 	private static Index<Node> nodeIndexMethod;
@@ -30,6 +29,8 @@ public class Graph
 	private static Index<Node> nodeIndexShortField;
 	private static Index<Node> nodeIndexShortMethod;
 	private static Index<Node> nodeIndexShortClass;
+	
+	private static Index<Node> nodeParents;
 
 	private static enum RelTypes implements RelationshipType
 	{
@@ -56,7 +57,8 @@ public class Graph
 
 		for ( ClassElement ce : knownModel.getClasses() )
 		{
-			createAndIndexClassElement(ce);
+			Node node = createAndIndexClassElement(ce);
+			createAndIndexParents(ce,node);
 		}
 		for(MethodElement me : knownModel.getMethods())
 		{
@@ -76,17 +78,16 @@ public class Graph
 		nodeIndexField = graphDb.index().forNodes( "fields" );
 		nodeIndexShortField = graphDb.index().forNodes( "short_fields" );
 		nodeIndexShortMethod = graphDb.index().forNodes( "short_methods" );
-		nodeIndexShortClass = graphDb.index().forNodes( "short_classess" );
+		nodeIndexShortClass = graphDb.index().forNodes( "short_classes" );
+		nodeParents = graphDb.index().forNodes("parents");
 		registerShutdownHook();
-
-
-
-		String fName1 = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
-		String fName2 = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
+		
+		//Uncomment for a single XML to be appended to the graph
+		/*
+		String fName2 = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
 		Transaction tx0 = graphDb.beginTx();
 		try
 		{
-			populate(fName1);
 			populate(fName2);
 			tx0.success();
 		}
@@ -95,30 +96,33 @@ public class Graph
 		{
 			tx0.finish();
 		}
-		File xmlPath = new File("/home/s23subra/maven_data/xml/");
+		*/
+		//Uncomment to iterate over all XML files in a directory
+		///*
+		File xmlPath = new File("/home/s23subra/new_maven_data/xml2/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
 		for(File file : fileList)
 		{
 			i++;
-			String fname = file.getAbsolutePath();
-			System.out.println("Processing "+fname + " : " + i);
-			Transaction tx1 = graphDb.beginTx();
-			try
+			if(i>=0)
 			{
-				if(fname.equals("/home/s23subra/maven_data/xml/clover.org.apache.xml")==false && fname.equals("/home/s23subra/maven_data/xml/org.ow2.bonita.xml")==false)
+				String fname = file.getAbsolutePath();
+				System.out.println("Processing "+fname + " : " + i);
+				Transaction tx1 = graphDb.beginTx();
+				try
+				{
+					//if(fname.contains("general_")==true)
 					populate(fname);
-				//if(i==3)
-				//break;
-				tx1.success();
+					tx1.success();
+				}
+				finally
+				{
+					tx1.finish();
+				}
 			}
-			finally
-			{
-				tx1.finish();
-			}
-
 		}
-
+		//*/
 		shutdown();
 	}
 
@@ -127,13 +131,27 @@ public class Graph
 		graphDb.shutdown();
 	}
 
-
-	private static Node createAndIndexClassElement( ClassElement ce ) throws IOException
+	private static void createAndIndexParents(ClassElement ce, Node node) throws IOException 
+	{
+		Collection<ClassElement> parentsList = ce.getParents();
+		if(parentsList!=null)
+		{
+			for(ClassElement parent : parentsList)
+			{
+						Node parentNode = createAndIndexClassElement(parent);
+						node.createRelationshipTo(parentNode, RelTypes.PARENT);
+						parentNode.createRelationshipTo(node, RelTypes.CHILD);
+						nodeParents.add( parentNode, "parent", ce.getId());
+			}
+		}
+	}
+	
+	private static Node createAndIndexClassElement( ClassElement ce) throws IOException
 	{
 		IndexHits<Node> userNodes  = nodeIndexClass.get("id", ce.getId());
-		if(userNodes.hasNext()==false)
+		Iterator<Node> iter = userNodes.iterator();
+		if(iter.hasNext()==false)
 		{
-			//System.out.println("###New Node: "+ce.getId());
 			Node node = graphDb.createNode();
 			node.setProperty( "id", ce.getId() );
 			node.setProperty("exactName", ce.getExactName());
@@ -142,40 +160,14 @@ public class Graph
 			node.setProperty( "isPrimitive", "false" );
 			node.setProperty( "isInterface", ce.isInterface() );
 			node.setProperty( "isExternal", ce.isExternal() );
-			
-			//node.setProperty("ce", ce);
-			try{
-			Collection<ClassElement> parentsList = ce.getParents();
-			if(parentsList!=null)
-			{
-				for(ClassElement parent : parentsList)
-				{
-					Node parentNode = createAndIndexClassElement(parent);
-					node.createRelationshipTo(parentNode, RelTypes.PARENT);
-					parentNode.createRelationshipTo(node, RelTypes.CHILD);
-				}
-
-			}
-			}
-			//org.apache.http.impl.io.HttpRequestWriter
-			catch(StackOverflowError e)
-			{
-				System.out.println("StackOverflowError : "+ ce.getId());
-			}
-			/*ce.setParentNull();
-			ce.setMethodsNull();
-			ce.setFieldsNull();
-			byte[] array = ce.convertClassElementToByteArray();
-			//System.out.println(ce.getId()+" : "+array.length);
-			node.setProperty("CEByteArray", array);*/
 			nodeIndexClass.add( node, "id", ce.getId() );
 			nodeIndexShortClass.add(node, "short_name", ce.getExactName());
 			return node;
 		}
 		else
 		{
-			//System.out.println("%%%Existing Node: "+ce.getId());
-			return userNodes.getSingle();
+			Node existingNode = userNodes.getSingle();
+			return existingNode;
 		}
 	}
 
@@ -191,10 +183,10 @@ public class Graph
 			node.setProperty( "vis", me.getVisiblity().toString());
 			
 			ClassElement parentClass = _model.getClass(me.extractClassName());
-			insertParameterAndReturn(RelTypes.IS_METHOD,RelTypes.HAS_METHOD, parentClass, node);
+			insertParentAndReturn(RelTypes.IS_METHOD,RelTypes.HAS_METHOD, parentClass, node);
 			
 			ClassElement returnType = me.getReturnElement().getType();
-			insertParameterAndReturn(RelTypes.RETURN_TYPE, RelTypes.IS_RETURN_TYPE, returnType, node);
+			insertParentAndReturn(RelTypes.RETURN_TYPE, RelTypes.IS_RETURN_TYPE, returnType, node);
 
 			node.setProperty("argCount", me.getParameters().size());
 			Collection<MethodParamElement> params = me.getParameters();
@@ -206,13 +198,6 @@ public class Graph
 				insertParameter(RelTypes.PARAMETER, RelTypes.IS_PARAMETER, paramtype, node, i);
 			}
 			
-			/*me.setCallsNull();
-			me.setReturnNull();
-			me.setParamsNull();
-			me.setReferencesNull();
-			byte[] array = me.convertMethodElementToByteArray();
-			//System.out.println(me.getId()+" : " +array.length);
-			node.setProperty("MEByteArray", array);*/
 			nodeIndexMethod.add( node, "id", me.getId() );
 			nodeIndexShortMethod.add(node, "short_name", me.getExactName());
 			return node;
@@ -236,9 +221,9 @@ public class Graph
 			
 			ClassElement fieldType = fe.getType();
 			
-			insertParameterAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
+			insertParentAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
 			ClassElement parentClass = _model.getClass(fe.getExactClassName());
-			insertParameterAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
+			insertParentAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
 			
 			/*byte[] array = fe.convertFieldElementToByteArray();
 			//System.out.println(array.length);
@@ -251,7 +236,7 @@ public class Graph
 			return fieldNodes.getSingle();
 	}
 
-	private static void insertParameterAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node) throws IOException
+	private static void insertParentAndReturn(RelationshipType outgoing, RelationshipType incoming, ClassElement type, Node node) throws IOException
 	{
 		 if(type==null)
              return; 

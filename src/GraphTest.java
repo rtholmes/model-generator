@@ -1,6 +1,9 @@
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.Vector;
 
 import org.neo4j.graphdb.Direction;
@@ -18,6 +21,7 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 
+
 import ca.uwaterloo.cs.se.inconsistency.core.model2.ClassElement;
 import ca.uwaterloo.cs.se.inconsistency.core.model2.FieldElement;
 import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodElement;
@@ -27,7 +31,7 @@ import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodReturnElement;
 public class GraphTest
 {
 	private static GraphDatabaseService graphDb;
-	private static final String DB_PATH = "neo4j-store-new_rln";
+	private static final String DB_PATH = "neo4j-store-new-maven-data_handling_duplicates";
 	public static Index<Node> classIndex ;
 	public static Index<Node> methodIndex ;
 	public static Index<Node> fieldIndex ;
@@ -50,7 +54,7 @@ public class GraphTest
 		IS_FIELD_TYPE,
 		HAS_FIELD_TYPE
 	}
-	
+
 
 	public static void main(String[] args)
 	{
@@ -59,7 +63,7 @@ public class GraphTest
 		methodIndex = graphDb.index().forNodes("methods");
 		fieldIndex = graphDb.index().forNodes("fields");
 		
-		shortClassIndex = graphDb.index().forNodes("short_classess");
+		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		shortFieldIndex = graphDb.index().forNodes("short_fields");
 		registerShutdownHook();
@@ -68,23 +72,24 @@ public class GraphTest
 		try
 		{
 			System.out.println("searching.....");
-			String idToFind = "java.lang.String";
+			String idToFind = "java.lang.Exception";
 			Node foundUser = classIndex.get( "id", idToFind ).getSingle();
-			
+			System.out.println("visi : "+foundUser.getProperty("isAbstract"));
 			String output = foundUser.getProperty("id") + "'s parents:\n";
-			Traverser ParentTraverser = getParents( foundUser );
+			Traverser ParentTraverser = getMethods( foundUser );
 			int numberOfSuperTypes=0;
 			for ( Path pathToParent : ParentTraverser )
 			{
-				output += "At depth " + pathToParent.length() + ", visibility : "+pathToParent.endNode().getProperty("vis")+"=> "+ pathToParent.endNode().getProperty( "id" ) + "\n";
+				output = "At depth " + pathToParent.length() + ", visibility : "+pathToParent.endNode().getProperty("vis")+"=> "+ pathToParent.endNode().getProperty( "id" ) + "\n";
+				System.out.println(output +" : " +getMethodParams(pathToParent.endNode()).size());
 				numberOfSuperTypes++;
 			}
-			output += "Number of friends found: " + numberOfSuperTypes + "\n";
+			output += "Number of methods found: " + numberOfSuperTypes + "\n";
 			System.out.println(output);
 
 			output = null;
 			output = foundUser.getProperty("id") + "'s methods:\n";
-			ParentTraverser = getMethods( foundUser );
+			/*ParentTraverser = getMethods( foundUser );
 			numberOfSuperTypes=0;
 			for ( Path methods : ParentTraverser )
 			{
@@ -98,7 +103,7 @@ public class GraphTest
 				numberOfSuperTypes++;
 			}
 			output += "Number of methods found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
+			System.out.println(output);*/
 
 			/*output = null;
 			output = foundUser.getProperty("id") + "'s fields:\n";
@@ -114,33 +119,40 @@ public class GraphTest
 
 			System.out.println("**************************");
 			
-			IndexHits<Node> iter = shortMethodIndex.get("short_name", "substring");
-			/*for(Node temp: iter)
+			IndexHits<Node> iter = shortMethodIndex.get("short_name", "getBean");
+			for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));
 				Traverser traverser = getParentClass(temp);
 				for ( Path node : traverser )
 				{
-					output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
-					System.out.println(output);
+					//output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
+					//System.out.println(output);
+					
 				}
 			}
-			System.out.println(iter.size()+" methods found");*/
+			System.out.println(iter.size()+" methods found");
 			
 			//System.out.println("**************************");
 			
-			iter = shortClassIndex.get("short_name", "FileInputStream");
+			/*iter = shortClassIndex.get("short_name", "Chronometer");
 			for(Node temp: iter)
 			{
 				System.out.println(temp.getProperty("id"));
 				Traverser traverser = getParents(temp);
 				for ( Path node : traverser )
 				{
-					output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
-					System.out.println(output);
+					Iterable<Relationship> iter3 = node.endNode().getRelationships(RelTypes.HAS_METHOD);
+					Iterator<Relationship> test = iter3.iterator();
+					while(test.hasNext())
+					{
+						System.out.println("--- "+test.next().getEndNode().getProperty("id"));
+					}
+					//output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
+					//System.out.println(output);
 				}
 			}
-			System.out.println(iter.size()+" classes found");	
+			System.out.println(iter.size()+" classes found");	*/
 			
 			
 			tx2.success();
@@ -206,7 +218,7 @@ public class GraphTest
 		}
 		return container;
 	}
-	private Collection<Node> getMethodParams(Node node) 
+	private static Collection<Node> getMethodParams(Node node) 
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
