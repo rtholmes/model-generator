@@ -1,16 +1,10 @@
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.TreeSet;
-import java.util.Vector;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
@@ -22,16 +16,11 @@ import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 
 
-import ca.uwaterloo.cs.se.inconsistency.core.model2.ClassElement;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.FieldElement;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodElement;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodParamElement;
-import ca.uwaterloo.cs.se.inconsistency.core.model2.MethodReturnElement;
 
 public class GraphTest
 {
 	private static GraphDatabaseService graphDb;
-	private static final String DB_PATH = "neo4j-store-new-maven-data_handling_duplicates";
+	private static final String DB_PATH = "maven-graph-database";
 	public static Index<Node> classIndex ;
 	public static Index<Node> methodIndex ;
 	public static Index<Node> fieldIndex ;
@@ -39,6 +28,7 @@ public class GraphTest
 	public static Index<Node> shortClassIndex ;
 	public static Index<Node> shortMethodIndex ;
 	public static Index<Node> shortFieldIndex ;
+	public static Index<Node> parentIndex ;
 	private static enum RelTypes implements RelationshipType
 	{
 		PARENT,
@@ -66,6 +56,9 @@ public class GraphTest
 		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		shortFieldIndex = graphDb.index().forNodes("short_fields");
+		parentIndex = graphDb.index().forNodes("parents");
+		//classIndex.
+		
 		registerShutdownHook();
 		
 		Transaction tx2 = graphDb.beginTx();
@@ -236,13 +229,24 @@ public class GraphTest
 		return paramNodesCollection;
 	}
 	
-	private static Traverser getParents(final Node node )
+	private static HashSet<Node> getParents(final Node node )
 	{
-		TraversalDescription td = Traversal.description()
+		/*TraversalDescription td = Traversal.description()
 				.breadthFirst()
 				.relationships( RelTypes.PARENT, Direction.OUTGOING )
 				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
+		return td.traverse( node );*/
+		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
+		HashSet<Node> classElementCollection = new HashSet<Node>();
+		for(Node candidate : candidateNodes)
+		{
+			if(candidate!=null)
+			{
+				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+					classElementCollection.add(candidate);
+			}
+		}
+		return classElementCollection;
 	}
 	
 	private static Traverser getParentClass(final Node node )

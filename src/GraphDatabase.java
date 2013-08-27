@@ -14,21 +14,24 @@ import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
+import org.neo4j.index.impl.lucene.LuceneIndex;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.index.impl.lucene.LuceneIndex;
 
 
 public class GraphDatabase
 {
-	private static GraphDatabaseService graphDb;
+	static GraphDatabaseService graphDb;
 	private static String DB_PATH;
 	
-	public Index<Node> classIndex ;
-	public Index<Node> methodIndex ;
-	public Index<Node> fieldIndex ;
+	//public Index<Node> classIndex ;
+	//public Index<Node> methodIndex ;
+	//public Index<Node> fieldIndex ;
 	
 	public Index<Node> shortClassIndex ;
 	public Index<Node> shortMethodIndex ;
-	public Index<Node> shortFieldIndex ;
+	//public Index<Node> shortFieldIndex ;
+	public Index<Node> parentIndex;
 	
 	private static enum RelTypes implements RelationshipType
 	{
@@ -51,14 +54,23 @@ public class GraphDatabase
 		DB_PATH = input_oracle;
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
 		
-		classIndex = graphDb.index().forNodes("classes");
-		methodIndex = graphDb.index().forNodes("methods");
-		fieldIndex = graphDb.index().forNodes("fields");
+		//classIndex = graphDb.index().forNodes("classes");
+		//methodIndex = graphDb.index().forNodes("methods");
+		//fieldIndex = graphDb.index().forNodes("fields");
 		
 		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
-		shortFieldIndex = graphDb.index().forNodes("short_fields");
+		//shortFieldIndex = graphDb.index().forNodes("short_fields");
 		
+		parentIndex = graphDb.index().forNodes("parents");
+		
+		//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
+		//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
+		//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
+		((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
+		((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
+		//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
+		((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);
 		registerShutdownHook();
 	}
 	
@@ -88,16 +100,6 @@ public class GraphDatabase
 					classElementCollection.add(candidate);
 		}
 		return classElementCollection;
-	}
-	
-	public void test()
-	{
-		Collection<Node> test = new HashSet<Node>();
-		test= getCandidateClassNodes("Comparable");
-		for(Node n : test)
-		{
-			System.out.println(n.getProperty("id"));
-		}
 	}
 	
 	/*public Collection<ClassElement> getCandidateClasses(String className) 
@@ -180,7 +182,7 @@ public class GraphDatabase
 	
 	public boolean checkIfParentNode(Node parentNode, String childId)
 	{
-		Collection<Node> candidateChildren = new HashSet<Node>();
+		/*Collection<Node> candidateChildren = new HashSet<Node>();
 		if(childId.contains(".")==false)
 		{
 			candidateChildren.addAll(getCandidateClassNodes(childId));
@@ -206,8 +208,24 @@ public class GraphDatabase
 						return true;
 					}
 			}
-		}
+		}*/
 		//System.out.println("isNotParent");
+		IndexHits<Node> candidateNodes = parentIndex.get("parent", childId);
+		for(Node candidate : candidateNodes)
+		{
+			if(candidate!=null)
+			{
+				if(candidate.equals(parentNode))
+					return true;
+				else
+				{
+					Collection<Node> parents = getParents(candidate);
+					for(Node pnode : parents)
+						if(candidate.equals(parentNode))
+							return true;
+				}
+			}
+		}
 		return false;
 	}
 	
@@ -314,12 +332,12 @@ public class GraphDatabase
 		return paramNodesCollection;
 	}
 	
-	private static void shutdown()
+	private void shutdown()
 	{
 		graphDb.shutdown();
 	}
 		
-	private static void registerShutdownHook()
+	private void registerShutdownHook()
 	{
 		// Registers a shutdown hook for the Neo4j and index service instances
 		// so that it shuts down nicely when the VM exits (even if you
@@ -333,7 +351,7 @@ public class GraphDatabase
 			}
 		} );
 	}
-	private static Node getUltimateParent(final Node node )
+	/*private Node getUltimateParent(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
@@ -349,21 +367,23 @@ public class GraphDatabase
 			}
 		}
 		return answer;
-	}
-	public static HashSet<Node> getParents(final Node node )
+	}*/
+	public HashSet<Node> getParents(final Node node )
 	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARENT, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		HashSet<Node> returnSet = new HashSet<Node>();
-		
-		Traverser ParentTraverser = td.traverse(node);
-		for ( Path pathToParent : ParentTraverser )
+		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
+		HashSet<Node> classElementCollection = new HashSet<Node>();
+		for(Node candidate : candidateNodes)
 		{
-			returnSet.add(pathToParent.endNode());
+			if(candidate!=null)
+			{
+				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+				{
+					classElementCollection.add(candidate);
+					classElementCollection.addAll(getParents(candidate));
+				}
+			}
 		}
-		return returnSet;
+		return classElementCollection;
 	}
 
 }

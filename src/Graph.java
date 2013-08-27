@@ -80,11 +80,12 @@ public class Graph
 		nodeIndexShortMethod = graphDb.index().forNodes( "short_methods" );
 		nodeIndexShortClass = graphDb.index().forNodes( "short_classes" );
 		nodeParents = graphDb.index().forNodes("parents");
+		
 		registerShutdownHook();
 		
 		//Uncomment for a single XML to be appended to the graph
-		/*
-		String fName2 = "/home/s23subra/workspace/Java Snippet Parser/android_final.xml";
+		///*
+		String fName2 = "/home/s23subra/workspace/Java Snippet Parser/rt.xml";
 		Transaction tx0 = graphDb.beginTx();
 		try
 		{
@@ -96,9 +97,9 @@ public class Graph
 		{
 			tx0.finish();
 		}
-		*/
+		//*/
 		//Uncomment to iterate over all XML files in a directory
-		///*
+		/*
 		File xmlPath = new File("/home/s23subra/new_maven_data/xml2/");
 		File[] fileList = xmlPath.listFiles();
 		int i=0;
@@ -122,7 +123,7 @@ public class Graph
 				}
 			}
 		}
-		//*/
+		*/
 		shutdown();
 	}
 
