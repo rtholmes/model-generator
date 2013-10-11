@@ -18,5 +18,7 @@
 	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/neo4j-community-1.9.1/lib/server-api-1.9.1.jar"/>
 	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/dom4j-1.6.1.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/ca.uwaterloo.cs.se.inconsistency.core"/>
+	<classpathentry kind="lib" path="/home/s23subra/workspace/Java Snippet Parser/jedis-2.1.0.jar"/>
+	<classpathentry kind="lib" path="/home/s23subra/workspace/model-generator/dependencies/ca.lsmr.common_20110124.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

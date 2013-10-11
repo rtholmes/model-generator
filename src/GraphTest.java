@@ -1,5 +1,11 @@
-import java.util.Collection;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -15,6 +21,10 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.Traversal;
 
+import com.google.common.collect.HashMultimap;
+
+
+
 
 
 public class GraphTest
@@ -29,6 +39,49 @@ public class GraphTest
 	public static Index<Node> shortMethodIndex ;
 	public static Index<Node> shortFieldIndex ;
 	public static Index<Node> parentIndex ;
+	
+	public static String getIdWithoutArgs(String name)	//to store class name and exact method name as ivars
+	{
+		String[] array = name.split("\\(");
+		return array[0];
+	}
+	public static String getPackage(String name)	//to store class name and exact method name as ivars
+	{
+		String[] array = name.split("\\(");
+		return array[0];
+	}
+	public static String getExactNameMethod(String id)	//to store class name and exact method name as ivars
+	{
+		if (id.endsWith("<clinit>")){
+			//_exactName = "<clinit>";
+			String array[] = id.split(".<clinit>");
+			return getExactNameClass(array[0]);	
+		}
+		else{		
+		String[] array = id.split("\\(");
+		array = array[0].split("\\.");
+		//_exactName = array[array.length-1];
+		String className = array[0];		
+		for (int i=1; i<array.length-1; i++) className += "." + array[i];
+		return getExactNameClass(className);
+	 	}
+		
+	}
+	public static String getExactNameClass(String id) 
+	{
+		String name=id;
+		int i;
+		for(i = 0;i<name.length();i++)
+		{
+			if(Character.isUpperCase(name.charAt(i)))
+			{
+				return id.substring(i);
+			}
+		}
+		return id;
+	}
+	
+	
 	private static enum RelTypes implements RelationshipType
 	{
 		PARENT,
@@ -45,8 +98,62 @@ public class GraphTest
 		HAS_FIELD_TYPE
 	}
 
-
-	public static void main(String[] args)
+	
+	public static ArrayList<String> getCommonMethods(Set<Node> exactClassNameNodeList)
+	{
+		ArrayList<String> answerList = new ArrayList<String>();
+		HashMap<String, TreeSet<String>> counter = new HashMap<String, TreeSet<String>>();
+		String exactClassName = null;
+		for(Node exactClassNameNode : exactClassNameNodeList)
+		{
+			exactClassName = (String) exactClassNameNode.getProperty("exactName");
+			HashSet<Node> methodNodeList = getMethodNodes(exactClassNameNode);
+			for(Node methodNode : methodNodeList)
+			{
+				String idWithArgs = (String) methodNode.getProperty("id");
+				String exactMethodName = (String) methodNode.getProperty("exactName");
+				if(exactMethodName.equals("<init>")==false)
+				{
+					String idWithoutArgs = getIdWithoutArgs(idWithArgs);
+					//System.out.println(idWithoutArgs);
+					if(counter.containsKey(exactMethodName))
+					{
+						TreeSet<String> temp = counter.get(exactMethodName);
+						temp.add(idWithoutArgs);
+						counter.put(exactMethodName, temp);
+					}
+					else
+					{
+						TreeSet<String> temp = new TreeSet<String>();
+						temp.add(idWithoutArgs);
+						counter.put(exactMethodName, temp);
+					}
+				}
+			}
+		}
+		
+		Set<String> keys = counter.keySet();
+		for(String key:keys)
+		{
+			TreeSet<String> valSet = counter.get(key);
+			if(valSet.size() > exactClassNameNodeList.size()/2)
+			{
+				//answerList.add(key);
+				String blah =  exactClassName+" . "+key + " : \n";
+				for(String val : valSet)
+				{
+					blah = blah + "  - " + val + "\n";
+				}
+				//System.out.println(blah);
+				answerList.add(blah);
+			}
+		}
+		return answerList;
+	
+	}	
+	
+	
+	public static void main(String[] args) throws IOException
 	{
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
 		classIndex = graphDb.index().forNodes("classes");
@@ -60,96 +167,53 @@ public class GraphTest
 		//classIndex.
 		
 		registerShutdownHook();
+		BufferedWriter br = new BufferedWriter(new FileWriter("collisions2.txt"));
 		
 		Transaction tx2 = graphDb.beginTx();
 		try
-		{
-			System.out.println("searching.....");
-			String idToFind = "java.lang.Exception";
-			Node foundUser = classIndex.get( "id", idToFind ).getSingle();
-			System.out.println("visi : "+foundUser.getProperty("isAbstract"));
-			String output = foundUser.getProperty("id") + "'s parents:\n";
-			Traverser ParentTraverser = getMethods( foundUser );
-			int numberOfSuperTypes=0;
-			for ( Path pathToParent : ParentTraverser )
-			{
-				output = "At depth " + pathToParent.length() + ", visibility : "+pathToParent.endNode().getProperty("vis")+"=> "+ pathToParent.endNode().getProperty( "id" ) + "\n";
-				System.out.println(output +" : " +getMethodParams(pathToParent.endNode()).size());
-				numberOfSuperTypes++;
-			}
-			output += "Number of methods found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);
-
-			output = null;
-			output = foundUser.getProperty("id") + "'s methods:\n";
-			/*ParentTraverser = getMethods( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path methods : ParentTraverser )
-			{
-				output = "At depth " + methods.length() + " => "+ methods.endNode().getProperty( "id" ) + ":" + methods.endNode().getProperty("vis")+ "\n";
-				Iterable<Relationship> relations = methods.endNode().getRelationships(Direction.OUTGOING, RelTypes.PARAMETER);
-				for(Relationship rln: relations)
-				{
-					System.out.println((String)rln.getEndNode().getProperty("id")+rln.getEndNode().getProperty("paramIndex")+"*****");
-				}
-				System.out.println(output);
-				numberOfSuperTypes++;
-			}
-			output += "Number of methods found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);*/
-
-			/*output = null;
-			output = foundUser.getProperty("id") + "'s fields:\n";
-			ParentTraverser = getFields( foundUser );
-			numberOfSuperTypes=0;
-			for ( Path fields : ParentTraverser )
-			{
-				output += "At depth " + fields.length() + " => "+ fields.endNode().getProperty( "id" ) + "\n";
-				numberOfSuperTypes++;
-			}
-			output += "Number of fields found: " + numberOfSuperTypes + "\n";
-			System.out.println(output);*/
-
-			System.out.println("**************************");
+		{	
 			
-			IndexHits<Node> iter = shortMethodIndex.get("short_name", "getBean");
-			for(Node temp: iter)
+			 /*
+			    classIndex : 1646650
+				shortClassIndex : 1121887
+				methodIndex : 14206944
+				shortMethodIndex : 1600053
+				fieldIndex : 3149206
+				shortFieldIndex : 1115099
+			  */
+			HashMultimap<String, Node> nodesWithSameExactName = HashMultimap.create();
+			IndexHits<Node> indices = classIndex.query("id", "*");
+			System.out.println("Number of distinct class names: "+indices.size());
+			
+			for(Node node : indices)
 			{
-				System.out.println(temp.getProperty("id"));
-				Traverser traverser = getParentClass(temp);
-				for ( Path node : traverser )
-				{
-					//output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
-					//System.out.println(output);
-					
-				}
+				String shortName = (String)node.getProperty("exactName");
+				nodesWithSameExactName.put(shortName, node);
 			}
-			System.out.println(iter.size()+" methods found");
-			
-			//System.out.println("**************************");
-			
-			/*iter = shortClassIndex.get("short_name", "Chronometer");
-			for(Node temp: iter)
+			Set<String> distinctExactNames = nodesWithSameExactName.keySet();
+			System.out.println("Number of distinct short class names: "+distinctExactNames.size());
+			int c=0;
+			for(String name : distinctExactNames)
 			{
-				System.out.println(temp.getProperty("id"));
-				Traverser traverser = getParents(temp);
-				for ( Path node : traverser )
+				c++;
+				
+				Set<Node> list = nodesWithSameExactName.get(name);
+				if(list.size()>=3)
 				{
-					Iterable<Relationship> iter3 = node.endNode().getRelationships(RelTypes.HAS_METHOD);
-					Iterator<Relationship> test = iter3.iterator();
-					while(test.hasNext())
+					System.out.println(c);
+					ArrayList<String> methodnames = getCommonMethods(list);
+					for(String methodname:methodnames)
 					{
-						System.out.println("--- "+test.next().getEndNode().getProperty("id"));
+						System.out.println(methodname);
+						br.write(methodname);
 					}
-					//output = "At depth " + node.length() + " => "+ node.endNode().getProperty( "id" ) + "\n";
-					//System.out.println(output);
 				}
 			}
-			System.out.println(iter.size()+" classes found");	*/
-			
 			
 			tx2.success();
-		}
+			br.close();
+		
+			}
 		finally
 		{
 			tx2.finish();
@@ -159,12 +223,12 @@ public class GraphTest
 	}
 
 	
-	private HashSet<Node> getMethodNodes(Node node)
+	private static HashSet<Node> getMethodNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
 				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
+				.evaluator(Evaluators.excludeStartPosition());
 		Traverser methodTraverser = td.traverse( node );
 		HashSet<Node> methodsCollection = new HashSet<Node>();;
 		for ( Path methods : methodTraverser )
@@ -173,108 +237,16 @@ public class GraphTest
 			{
 				methodsCollection.add(methods.endNode());
 			}
+			else if(methods.length()>=1)
+			{
+				break;
+			}
 		}
 		return methodsCollection;
 	}
 	
-	private Node getMethodContainer(Node node)
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Node container = null;
-		for ( Path containerNode : traverser )
-		{
-			if(containerNode.length()==1)
-			{
-				container = containerNode.endNode();
-			}
-		}
-		return container;
-	}
-	private Node getMethodReturn(Node node)
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.RETURN_TYPE, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Node container = null;
-		for ( Path containerNode : traverser )
-		{
-			if(containerNode.length()==1)
-			{
-				container = containerNode.endNode();
-			}
-		}
-		return container;
-	}
-	private static Collection<Node> getMethodParams(Node node) 
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Collection<Node> paramNodesCollection = new HashSet<Node>();
-		for ( Path paramNode : traverser )
-		{
-			if(paramNode.length()==1)
-			{
-				paramNodesCollection.add(paramNode.endNode());
-			}
-		}
-		return paramNodesCollection;
-	}
 	
-	private static HashSet<Node> getParents(final Node node )
-	{
-		/*TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARENT, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );*/
-		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
-		HashSet<Node> classElementCollection = new HashSet<Node>();
-		for(Node candidate : candidateNodes)
-		{
-			if(candidate!=null)
-			{
-				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-					classElementCollection.add(candidate);
-			}
-		}
-		return classElementCollection;
-	}
-	
-	private static Traverser getParentClass(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
 
-	private static Traverser getMethods(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
-
-	private static Traverser getFields(final Node node )
-	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_FIELD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		return td.traverse( node );
-	}
 	
 	private static void shutdown()
 	{
