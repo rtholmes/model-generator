@@ -45,26 +45,24 @@ public class GraphTest
 		String[] array = name.split("\\(");
 		return array[0];
 	}
-	public static String getPackage(String name)	//to store class name and exact method name as ivars
+
+	public static String getClassId(String id)	//to store class name and exact method name as ivars
 	{
-		String[] array = name.split("\\(");
-		return array[0];
-	}
-	public static String getExactNameMethod(String id)	//to store class name and exact method name as ivars
-	{
-		if (id.endsWith("<clinit>")){
-			//_exactName = "<clinit>";
+		String _className = null;
+		if (id.endsWith("<clinit>"))
+		{
 			String array[] = id.split(".<clinit>");
-			return getExactNameClass(array[0]);	
+			_className = array[0];		
 		}
-		else{		
-		String[] array = id.split("\\(");
-		array = array[0].split("\\.");
-		//_exactName = array[array.length-1];
-		String className = array[0];		
-		for (int i=1; i<array.length-1; i++) className += "." + array[i];
-		return getExactNameClass(className);
+		else
+		{		
+			String[] array = id.split("\\(");
+			array = array[0].split("\\.");
+			String className = array[0];		
+			for (int i=1; i<array.length-1; i++) className += "." + array[i];
+			_className = className;
 	 	}
+		return _className;
 		
 	}
 	public static String getExactNameClass(String id) 
@@ -102,6 +100,7 @@ public class GraphTest
 	public static ArrayList<String> getCommonMethods(Set<Node> exactClassNameNodeList)
 	{
 		ArrayList<String> answerList = new ArrayList<String>();
+		int size = exactClassNameNodeList.size();
 		HashMap<String, TreeSet<String>> counter = new HashMap<String, TreeSet<String>>();
 		String exactClassName = null;
 		for(Node exactClassNameNode : exactClassNameNodeList)
@@ -115,7 +114,6 @@ public class GraphTest
 				if(exactMethodName.equals("<init>")==false)
 				{
 					String idWithoutArgs = getIdWithoutArgs(idWithArgs);
-					//System.out.println(idWithoutArgs);
 					if(counter.containsKey(exactMethodName))
 					{
 						TreeSet<String> temp = counter.get(exactMethodName);
@@ -136,18 +134,89 @@ public class GraphTest
 		for(String key:keys)
 		{
 			TreeSet<String> valSet = counter.get(key);
-			if(valSet.size() > exactClassNameNodeList.size()/2)
+			int valSetSize = valSet.size();
+			if(valSetSize > size/2)
 			{
-				//answerList.add(key);
-				String blah =  exactClassName+" . "+key + " : \n";
+				String blah =  exactClassName+" . "+key + " : ("+valSetSize+"/"+size+")\n";
 				for(String val : valSet)
 				{
 					blah = blah + "  - " + val + "\n";
 				}
-				//System.out.println(blah);
 				answerList.add(blah);
 			}
 		}
+		return answerList;
+	
+	}	
+	
+	public static TreeSet<String> findClassClusters(Set<Node> exactClassNameNodeList)
+	{
+		TreeSet<String> answerList = new TreeSet<String>();
+		int size = exactClassNameNodeList.size();
+		HashMap<String, TreeSet<String>> counter = new HashMap<String, TreeSet<String>>();
+		HashMultimap<String, String> cache = HashMultimap.create();
+		String exactClassName = null;
+		for(Node exactClassNameNode : exactClassNameNodeList)
+		{
+			exactClassName = (String) exactClassNameNode.getProperty("exactName");
+			HashSet<Node> methodNodeList = getMethodNodes(exactClassNameNode);
+			for(Node methodNode : methodNodeList)
+			{
+				String idWithArgs = (String) methodNode.getProperty("id");
+				String exactMethodName = (String) methodNode.getProperty("exactName");
+				if(exactMethodName.equals("<init>")==false)
+				{
+					cache.put((String) exactClassNameNode.getProperty("id"), exactMethodName); //cache the values to avoid reading from the graph again
+					String containerClass = getClassId(idWithArgs);
+					if(counter.containsKey(exactMethodName))
+					{
+						TreeSet<String> temp = counter.get(exactMethodName);
+						temp.add(containerClass);
+						counter.put(exactMethodName, temp);
+					}
+					else
+					{
+						TreeSet<String> temp = new TreeSet<String>();
+						temp.add(containerClass);
+						counter.put(exactMethodName, temp);
+					}
+				}
+			}
+		}
+		Set<String>classKeys =  cache.keySet();
+		for(String key : classKeys)
+		{
+			Set<String> values = cache.get(key);
+			int count = 0;
+			for(String value : values)
+			{
+				TreeSet<String> candidates = counter.get(value);
+				if(candidates.size()>size/2)
+				{
+					count++;
+					//System.out.println("------ "+value + " : " +candidates);
+				}
+			}
+			if(count>values.size()/2)
+				answerList.add(key+" : ("+count+"/"+values.size()+")");
+		}
+		
+		/*Set<String> keys = counter.keySet();
+		for(String key:keys)
+		{
+			TreeSet<String> valSet = counter.get(key);
+			int valSetSize = valSet.size();
+			if(valSetSize > size/2)
+			{
+				//String blah =  exactClassName+" . "+key + " : ("+valSetSize+"/"+size+")\n";
+				for(String val : valSet)
+				{
+					//String blah = getClassId(val);
+					//blah = blah + "  - " + val + "\n";
+					answerList.add(val);
+				}
+			}
+		}*/
 		return answerList;
 	
 	}	
@@ -167,7 +236,7 @@ public class GraphTest
 		//classIndex.
 		
 		registerShutdownHook();
-		BufferedWriter br = new BufferedWriter(new FileWriter("collisions2.txt"));
+		BufferedWriter br = new BufferedWriter(new FileWriter("class-collisions_update.txt"));
 		
 		Transaction tx2 = graphDb.beginTx();
 		try
@@ -191,34 +260,50 @@ public class GraphTest
 				nodesWithSameExactName.put(shortName, node);
 			}
 			Set<String> distinctExactNames = nodesWithSameExactName.keySet();
-			System.out.println("Number of distinct short class names: "+distinctExactNames.size());
-			int c=0;
-			for(String name : distinctExactNames)
+			TreeSet<String> distinctExactNamesTree = new TreeSet<String>();
+			for(String s:distinctExactNames)
+				distinctExactNamesTree.add(s);
+			System.out.println("Number of distinct short class names: "+distinctExactNamesTree.size());
+			
+			int counter1=0;
+			int counter2=0;
+			for(String name : distinctExactNamesTree)
 			{
-				c++;
-				
 				Set<Node> list = nodesWithSameExactName.get(name);
 				if(list.size()>=3)
 				{
-					System.out.println(c);
-					ArrayList<String> methodnames = getCommonMethods(list);
+					//ArrayList<String> methodnames = getCommonMethods(list);
+					String toWrite = name + " : ("+list.size()+")\n";
+					TreeSet<String> methodnames = findClassClusters(list);
+					counter2++;
 					for(String methodname:methodnames)
 					{
-						System.out.println(methodname);
-						br.write(methodname);
+						toWrite = toWrite + "  -  "+methodname+"\n";
+					}
+					if(methodnames.size()>1)
+					{
+						counter1++;
+						System.out.println(toWrite);
+						br.write(toWrite);
 					}
 				}
 			}
-			
+			System.out.println("Number of short class name clusters with more than 3 candidate classes: "+counter2);
+			System.out.println("Number of short class names that have at least one method that occurs in more than 50% of its candidate classes: "+counter1 +"\n(Only considering short class names that have at least 3 candidates)");
 			tx2.success();
 			br.close();
-		
-			}
+			/*
+			Number of distinct class names: 1646650
+			Number of distinct short class names: 1121887
+			Number of short class names with more than 3 candidate classes: 71461
+			Number of short class names that have at least one method that occurs in more than 50% of its candidate classes: 44239
+			(Only considering short class names that have at least 3 candidates) 
+			 */
+		}
 		finally
 		{
 			tx2.finish();
 		}
-
 		shutdown();
 	}
 
@@ -245,9 +330,6 @@ public class GraphTest
 		return methodsCollection;
 	}
 	
-	
-
-	
 	private static void shutdown()
 	{
 		graphDb.shutdown();
@@ -267,167 +349,4 @@ public class GraphTest
 			}
 		} );
 	}
-	
-	/*	public ClassElement convertByteArrayToClassElement(byte[] yourBytes) throws IOException, ClassNotFoundException
-	{
-		ByteArrayInputStream bis = new ByteArrayInputStream(yourBytes);
-		ObjectInput in = null;
-		ClassElement ce = null;
-		try 
-		{
-		  in = new ObjectInputStream(bis);
-		  ce = (ClassElement) in.readObject(); 
-		} 
-		finally 
-		{
-		  bis.close();
-		  in.close();
-		}
-		return ce;
-	}
-	
-	public FieldElement convertByteArrayToFieldElement(byte[] yourBytes) throws IOException, ClassNotFoundException
-	{
-		ByteArrayInputStream bis = new ByteArrayInputStream(yourBytes);
-		ObjectInput in = null;
-		FieldElement fe = null;
-		try 
-		{
-		  in = new ObjectInputStream(bis);
-		  fe = (FieldElement) in.readObject(); 
-		} 
-		finally 
-		{
-		  bis.close();
-		  in.close();
-		}
-		return fe;
-	}
-	
-	public MethodElement convertByteArrayToMethodElement(byte[] yourBytes) throws IOException, ClassNotFoundException
-	{
-		ByteArrayInputStream bis = new ByteArrayInputStream(yourBytes);
-		ObjectInput in = null;
-		MethodElement me = null;
-		try 
-		{
-		  in = new ObjectInputStream(bis);
-		  me = (MethodElement) in.readObject(); 
-		} 
-		finally 
-		{
-		  bis.close();
-		  in.close();
-		}
-		return me;
-	}
-	
-	public static Collection<ClassElement> getCandidateClasses(String className) 
-	{
-		IndexHits<Node> candidateNodes = shortClassIndex.get("short_name", className);
-		Collection<ClassElement> classElementCollection = new HashSet<ClassElement>();
-		for(Node candidate : candidateNodes)
-		{
-			ClassElement ce = getClassElementFromNode(candidate);
-			classElementCollection.add(ce);
-		}
-		return classElementCollection;
-	}
-	
-	public static Collection<MethodElement> getCandidateMethods(String methodName) 
-	{
-		IndexHits<Node> candidateNodes = shortMethodIndex.get("short_name", methodName);
-		Collection<MethodElement> methodElementCollection = new HashSet<MethodElement>();
-		for(Node candidate : candidateNodes)
-		{
-			MethodElement me = getMethodElementFromNode(candidate);
-			methodElementCollection.add(me);
-		}
-		return methodElementCollection;
-	}
-	
-	public static ClassElement getClassElementForMethod(String id) 
-	{
-		Node node = methodIndex.get("id", id).getSingle();
-		Node containerNode = getMethodContainer(node);
-		ClassElement container = getClassElementFromNode(containerNode);
-		return container;
-	}
-	
-	private static ClassElement getClassElementFromNode(Node node)
-	{
-		System.out.println(node.getProperty("id"));
-		String id = (String) node.getProperty("id");
-		boolean isExternal = (Boolean) node.getProperty("isExternal");
-		boolean isInterface = (Boolean) node.getProperty("isInterface");
-		boolean isAbstract = (Boolean) node.getProperty("isAbstract");
-		String vis = (String) node.getProperty("vis");
-		ClassElement ce = new ClassElement(id, isExternal, isInterface, isAbstract);
-		ce.setVisibilty(vis);
-		HashSet<Node> methods = getMethodNodes(node);
-		Collection<MethodElement>methodElementCollection = new HashSet<MethodElement>();
-		for(Node methodNode : methods)
-		{
-			MethodElement me = getMethodElementFromNode(methodNode);
-			methodElementCollection.add(me);
-		}
-		return ce;
-	}
-	
-	private static MethodElement addMethodElementToNode(Node node)
-	{
-		System.out.println(node.getProperty("id"));
-		String id = (String) node.getProperty("id");
-		String vis = (String) node.getProperty("vis");
-		String exactName = (String) node.getProperty("exactName");
-		MethodElement me = new MethodElement(id);
-		me.setVisibilty(vis);
-		me.extractNames();
-		me.setCallsNull();
-		me.setReferencesNull();
-		Node returnNode = getMethodReturn(node);
-		ClassElement returnType = getClassElementFromNode(returnNode);
-		MethodReturnElement mre = new MethodReturnElement(returnType);
-		me.setReturn(mre);
-		Collection<Node> paramNodes = new HashSet<Node>();
-		paramNodes=getMethodParams(node);
-		List<MethodParamElement> paramElementsList = new Vector<MethodParamElement>();
-		for(Node paramNode : paramNodes)
-		{
-			System.out.println(paramNode.getProperty("id"));
-			MethodParamElement mpe = new MethodParamElement(getClassElementFromNode(paramNode));
-			paramElementsList.add(mpe);
-		}
-		me.setParams(paramElementsList);
-		return me;
-	}
-	
-	private static MethodElement getMethodElementFromNode(Node node)
-	{
-		System.out.println(node.getProperty("id"));
-		String id = (String) node.getProperty("id");
-		String vis = (String) node.getProperty("vis");
-		String exactName = (String) node.getProperty("exactName");
-		MethodElement me = new MethodElement(id);
-		me.setVisibilty(vis);
-		me.extractNames();
-		me.setCallsNull();
-		me.setReferencesNull();
-		Node returnNode = getMethodReturn(node);
-		ClassElement returnType = getClassElementFromNode(returnNode);
-		MethodReturnElement mre = new MethodReturnElement(returnType);
-		me.setReturn(mre);
-		Collection<Node> paramNodes = new HashSet<Node>();
-		paramNodes=getMethodParams(node);
-		List<MethodParamElement> paramElementsList = new Vector<MethodParamElement>();
-		for(Node paramNode : paramNodes)
-		{
-			System.out.println(paramNode.getProperty("id"));
-			MethodParamElement mpe = new MethodParamElement(getClassElementFromNode(paramNode));
-			paramElementsList.add(mpe);
-		}
-		me.setParams(paramElementsList);
-		return me;
-	}*/
-	
 }
