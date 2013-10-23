@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -45,6 +46,18 @@ public class GraphTest
 		String[] array = name.split("\\(");
 		return array[0];
 	}
+	
+	public static String getPackage(String id, String cname)	//to store class name and exact method name as ivars
+	{
+		String packageName = null;
+		if (id.contains(cname))
+		{
+			cname = Pattern.quote(cname);
+			String array[] = id.split(cname);
+			packageName = array[0].substring(0, array[0].length()-1);		
+		}
+		return packageName;
+	}
 
 	public static String getClassId(String id)	//to store class name and exact method name as ivars
 	{
@@ -55,7 +68,7 @@ public class GraphTest
 			_className = array[0];		
 		}
 		else
-		{		
+		{
 			String[] array = id.split("\\(");
 			array = array[0].split("\\.");
 			String className = array[0];		
@@ -97,57 +110,6 @@ public class GraphTest
 	}
 
 	
-	public static ArrayList<String> getCommonMethods(Set<Node> exactClassNameNodeList)
-	{
-		ArrayList<String> answerList = new ArrayList<String>();
-		int size = exactClassNameNodeList.size();
-		HashMap<String, TreeSet<String>> counter = new HashMap<String, TreeSet<String>>();
-		String exactClassName = null;
-		for(Node exactClassNameNode : exactClassNameNodeList)
-		{
-			exactClassName = (String) exactClassNameNode.getProperty("exactName");
-			HashSet<Node> methodNodeList = getMethodNodes(exactClassNameNode);
-			for(Node methodNode : methodNodeList)
-			{
-				String idWithArgs = (String) methodNode.getProperty("id");
-				String exactMethodName = (String) methodNode.getProperty("exactName");
-				if(exactMethodName.equals("<init>")==false)
-				{
-					String idWithoutArgs = getIdWithoutArgs(idWithArgs);
-					if(counter.containsKey(exactMethodName))
-					{
-						TreeSet<String> temp = counter.get(exactMethodName);
-						temp.add(idWithoutArgs);
-						counter.put(exactMethodName, temp);
-					}
-					else
-					{
-						TreeSet<String> temp = new TreeSet<String>();
-						temp.add(idWithoutArgs);
-						counter.put(exactMethodName, temp);
-					}
-				}
-			}
-		}
-		
-		Set<String> keys = counter.keySet();
-		for(String key:keys)
-		{
-			TreeSet<String> valSet = counter.get(key);
-			int valSetSize = valSet.size();
-			if(valSetSize > size/2)
-			{
-				String blah =  exactClassName+" . "+key + " : ("+valSetSize+"/"+size+")\n";
-				for(String val : valSet)
-				{
-					blah = blah + "  - " + val + "\n";
-				}
-				answerList.add(blah);
-			}
-		}
-		return answerList;
-	
-	}	
 	
 	public static TreeSet<String> findClassClusters(Set<Node> exactClassNameNodeList)
 	{
@@ -155,10 +117,9 @@ public class GraphTest
 		int size = exactClassNameNodeList.size();
 		HashMap<String, TreeSet<String>> counter = new HashMap<String, TreeSet<String>>();
 		HashMultimap<String, String> cache = HashMultimap.create();
-		String exactClassName = null;
 		for(Node exactClassNameNode : exactClassNameNodeList)
 		{
-			exactClassName = (String) exactClassNameNode.getProperty("exactName");
+			//String exactClassName = (String) exactClassNameNode.getProperty("exactName");
 			HashSet<Node> methodNodeList = getMethodNodes(exactClassNameNode);
 			for(Node methodNode : methodNodeList)
 			{
@@ -198,30 +159,20 @@ public class GraphTest
 				}
 			}
 			if(count>values.size()/2)
-				answerList.add(key+" : ("+count+"/"+values.size()+")");
+			{
+				//answerList.add(key+" : ("+count+"/"+values.size()+")");
+				answerList.add(key);
+			}
 		}
 		
-		/*Set<String> keys = counter.keySet();
-		for(String key:keys)
-		{
-			TreeSet<String> valSet = counter.get(key);
-			int valSetSize = valSet.size();
-			if(valSetSize > size/2)
-			{
-				//String blah =  exactClassName+" . "+key + " : ("+valSetSize+"/"+size+")\n";
-				for(String val : valSet)
-				{
-					//String blah = getClassId(val);
-					//blah = blah + "  - " + val + "\n";
-					answerList.add(val);
-				}
-			}
-		}*/
 		return answerList;
 	
 	}	
 	
-	
+	public static void addToCluster(String test, HashMap<String, HashSet<String>> packageCluster)
+	{
+		
+	}
 	public static void main(String[] args) throws IOException
 	{
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
@@ -233,10 +184,9 @@ public class GraphTest
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		shortFieldIndex = graphDb.index().forNodes("short_fields");
 		parentIndex = graphDb.index().forNodes("parents");
-		//classIndex.
 		
 		registerShutdownHook();
-		BufferedWriter br = new BufferedWriter(new FileWriter("class-collisions_update.txt"));
+		//BufferedWriter br = new BufferedWriter(new FileWriter("class-collisions_update.txt"));
 		
 		Transaction tx2 = graphDb.beginTx();
 		try
@@ -251,6 +201,7 @@ public class GraphTest
 				shortFieldIndex : 1115099
 			  */
 			HashMultimap<String, Node> nodesWithSameExactName = HashMultimap.create();
+			HashMap<String, HashSet<String>> packageCluster = new HashMap<String, HashSet<String>>();
 			IndexHits<Node> indices = classIndex.query("id", "*");
 			System.out.println("Number of distinct class names: "+indices.size());
 			
@@ -272,26 +223,25 @@ public class GraphTest
 				Set<Node> list = nodesWithSameExactName.get(name);
 				if(list.size()>=3)
 				{
-					//ArrayList<String> methodnames = getCommonMethods(list);
-					String toWrite = name + " : ("+list.size()+")\n";
 					TreeSet<String> methodnames = findClassClusters(list);
 					counter2++;
-					for(String methodname:methodnames)
-					{
-						toWrite = toWrite + "  -  "+methodname+"\n";
-					}
 					if(methodnames.size()>1)
 					{
+						System.out.println(name);
+						for(String methodname:methodnames)
+						{
+							String packageName = getPackage(methodname, name);
+							System.out.println("--- "+packageName);
+						}
 						counter1++;
-						System.out.println(toWrite);
-						br.write(toWrite);
+						//br.write(toWrite);
 					}
 				}
 			}
 			System.out.println("Number of short class name clusters with more than 3 candidate classes: "+counter2);
 			System.out.println("Number of short class names that have at least one method that occurs in more than 50% of its candidate classes: "+counter1 +"\n(Only considering short class names that have at least 3 candidates)");
 			tx2.success();
-			br.close();
+			//br.close();
 			/*
 			Number of distinct class names: 1646650
 			Number of distinct short class names: 1121887
