@@ -1,6 +1,7 @@
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
@@ -16,7 +17,6 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.index.impl.lucene.LuceneIndex;
 import org.neo4j.kernel.Traversal;
-import org.neo4j.index.impl.lucene.LuceneIndex;
 
 
 public class GraphDatabase
@@ -24,13 +24,11 @@ public class GraphDatabase
 	static GraphDatabaseService graphDb;
 	private static String DB_PATH;
 	
-	//public Index<Node> classIndex ;
-	//public Index<Node> methodIndex ;
-	//public Index<Node> fieldIndex ;
+	public Index<Node> classIndex ;
+	public Index<Node> methodIndex ;
 	
 	public Index<Node> shortClassIndex ;
 	public Index<Node> shortMethodIndex ;
-	//public Index<Node> shortFieldIndex ;
 	public Index<Node> parentIndex;
 	
 	private static enum RelTypes implements RelationshipType
@@ -54,13 +52,11 @@ public class GraphDatabase
 		DB_PATH = input_oracle;
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
 		
-		//classIndex = graphDb.index().forNodes("classes");
-		//methodIndex = graphDb.index().forNodes("methods");
-		//fieldIndex = graphDb.index().forNodes("fields");
+		classIndex = graphDb.index().forNodes("classes");
+		methodIndex = graphDb.index().forNodes("methods");
 		
 		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
-		//shortFieldIndex = graphDb.index().forNodes("short_fields");
 		
 		parentIndex = graphDb.index().forNodes("parents");
 		
@@ -74,114 +70,68 @@ public class GraphDatabase
 		registerShutdownHook();
 	}
 	
-	
-	public Collection<Node> getCandidateClassNodes(String className) 
+	public String getCurrentMethodName()
 	{
-		IndexHits<Node> candidateNodes = shortClassIndex.get("short_name", className);
-		Collection<Node> classElementCollection = new HashSet<Node>();
-		for(Node candidate : candidateNodes)
+	     StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
+	     return stackTraceElements[1].toString();
+	}
+	
+	public ArrayList<Node> getCandidateClassNodes(String className, HashMap<String, ArrayList<Node>> candidateNodesCache) 
+	{
+		long start = System.nanoTime();
+		ArrayList<Node> candidateClassCollection = null;
+		if(candidateNodesCache.containsKey(className))
 		{
-			//System.out.println(candidate.getProperty("vis"));
-			if(candidate!=null)
-				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-					classElementCollection.add(candidate);
+			candidateClassCollection = candidateNodesCache.get(className);
+			System.out.println("cache hit class!");
 		}
-		return classElementCollection;
-	}
-	
-	public Collection<Node> getCandidateMethodNodes(String methodName) 
-	{
-		IndexHits<Node> candidateNodes = shortMethodIndex.get("short_name", methodName);
-		Collection<Node> classElementCollection = new HashSet<Node>();
-		for(Node candidate : candidateNodes)
+		else
 		{
-			if(candidate!=null)
-				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-					classElementCollection.add(candidate);
+			IndexHits<Node> candidateNodes = shortClassIndex.get("short_name", className.replace(".", "$"));
+			candidateClassCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				if(candidate!=null)
+					if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+						candidateClassCollection.add(candidate);
+			}
+			candidateNodesCache.put(className, candidateClassCollection);
 		}
-		return classElementCollection;
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + className + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		return candidateClassCollection;
 	}
 	
-	/*public Collection<ClassElement> getCandidateClasses(String className) 
+	public ArrayList<Node> getCandidateMethodNodes(String methodName, HashMap<String, ArrayList<Node>> candidateMethodNodesCache) 
 	{
-		IndexHits<Node> candidateNodes = shortClassIndex.get("short_name", className);
-		Collection<ClassElement> classElementCollection = new HashSet<ClassElement>();
-		for(Node candidate : candidateNodes)
+		long start = System.nanoTime(); 
+		ArrayList<Node> candidateMethodNodes = null;
+		if(candidateMethodNodesCache.containsKey(methodName))
 		{
-			ClassElement ce = getClassElementFromNode(candidate);
-			classElementCollection.add(ce);
+			candidateMethodNodes = candidateMethodNodesCache.get(methodName);
+			System.out.println("cache hit method!");
 		}
-		return classElementCollection;
-	}
-	
-	public Collection<MethodElement> getCandidateMethods(String methodName) 
-	{
-		IndexHits<Node> candidateNodes = shortMethodIndex.get("short_name", methodName);
-		Collection<MethodElement> methodElementCollection = new HashSet<MethodElement>();
-		for(Node candidate : candidateNodes)
+		else
 		{
-			MethodElement me = getMethodElementFromNode(candidate);
-			methodElementCollection.add(me);
+			IndexHits<Node> candidateNodes = shortMethodIndex.get("short_name", methodName);
+			candidateMethodNodes = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				if(candidate!=null)
+					if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+						candidateMethodNodes.add(candidate);
+			}
+			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
 		}
-		return methodElementCollection;
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + methodName + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		return candidateMethodNodes;
 	}
 	
-	public ClassElement getClassElementForMethod(String id) 
-	{
-		Node node = methodIndex.get("id", id).getSingle();
-		Node containerNode = getMethodContainer(node);
-		ClassElement container = getClassElementFromNode(containerNode);
-		return container;
-	}
-	
-	private ClassElement getClassElementFromNode(Node node)
-	{
-		String id = (String) node.getProperty("id");
-		boolean isExternal = (Boolean) node.getProperty("isExternal");
-		boolean isInterface = (Boolean) node.getProperty("isInterface");
-		boolean isAbstract = (Boolean) node.getProperty("isAbstract");
-		String vis = (String) node.getProperty("vis");
-		ClassElement ce = new ClassElement(id, isExternal, isInterface, isAbstract);
-		ce.setVisibilty(vis);
-		HashSet<Node> methods = getMethodNodes(node);
-		Collection<MethodElement>methodElementCollection = new HashSet<MethodElement>();
-		for(Node methodNode : methods)
-		{
-			MethodElement me = getMethodElementFromNode(methodNode);
-			methodElementCollection.add(me);
-		}
-		return ce;
-	}
-	
-	private MethodElement getMethodElementFromNode(Node node)
-	{
-		String id = (String) node.getProperty("id");
-		String vis = (String) node.getProperty("vis");
-		String exactName = (String) node.getProperty("exactName");
-		MethodElement me = new MethodElement(id);
-		me.setVisibilty(vis);
-		me.extractNames();
-		me.setCallsNull();
-		me.setReferencesNull();
-		Node returnNode = getMethodReturn(node);
-		ClassElement returnType = getClassElementFromNode(returnNode);
-		MethodReturnElement mre = new MethodReturnElement(returnType);
-		me.setReturn(mre);
-		Collection<Node> paramNodes = new HashSet<Node>();
-		paramNodes=getMethodParams(node);
-		List<MethodParamElement> paramElementsList = new Vector<MethodParamElement>();
-		for(Node paramNode : paramNodes)
-		{
-			MethodParamElement mpe = new MethodParamElement(getClassElementFromNode(paramNode));
-			paramElementsList.add(mpe);
-		}
-		me.setParams(paramElementsList);
-		return me;
-	}
-	*/
 	
 	public boolean checkIfParentNode(Node parentNode, String childId)
 	{
+		
 		/*Collection<Node> candidateChildren = new HashSet<Node>();
 		if(childId.contains(".")==false)
 		{
@@ -210,6 +160,7 @@ public class GraphDatabase
 			}
 		}*/
 		//System.out.println("isNotParent");
+		long start = System.nanoTime(); 
 		IndexHits<Node> candidateNodes = parentIndex.get("parent", childId);
 		for(Node candidate : candidateNodes)
 		{
@@ -221,22 +172,24 @@ public class GraphDatabase
 				{
 					Collection<Node> parents = getParents(candidate);
 					for(Node pnode : parents)
-						if(candidate.equals(parentNode))
+						if(candidate.equals(pnode))
 							return true;
 				}
 			}
 		}
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
 	
-	public HashSet<String> getClassChildrenNodes(Node node)
+	public ArrayList<String> getClassChildrenNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
 				.relationships( RelTypes.CHILD, Direction.OUTGOING )
 				.evaluator( Evaluators.excludeStartPosition() );
 		Traverser childTraverser = td.traverse( node );
-		HashSet<String> childCollection = new HashSet<String>();;
+		ArrayList<String> childCollection = new ArrayList<String>();;
 		for ( Path child : childTraverser )
 		{
 				if(child.endNode()!=null)
@@ -245,73 +198,133 @@ public class GraphDatabase
 		return childCollection;
 	}
 	
-	public HashSet<Node> getMethodNodes(Node node)
+	public ArrayList<Node> getMethodNodes(Node node, HashMap<Node, ArrayList<Node>> methodNodesInClassNode)
 	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser methodTraverser = td.traverse( node );
-		HashSet<Node> methodsCollection = new HashSet<Node>();;
-		for ( Path methods : methodTraverser )
+		long start = System.nanoTime(); 
+		ArrayList<Node> methodsCollection = null;
+		if(methodNodesInClassNode.containsKey(node))
 		{
-			if(methods.length()==1)
-			{
-				if(methods.endNode()!=null)
-					methodsCollection.add(methods.endNode());
-			}
-			else
-				break;
+			methodsCollection = methodNodesInClassNode.get(node);
+			System.out.println("Cache hit methods in class");
 		}
+		else
+		{
+			TraversalDescription td = Traversal.description()
+					.breadthFirst()
+					.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
+					.evaluator( Evaluators.excludeStartPosition() );
+			Traverser methodTraverser = td.traverse( node );
+			methodsCollection = new ArrayList<Node>();;
+			for ( Path methods : methodTraverser )
+			{
+				if(methods.length()==1)
+				{
+					if(methods.endNode()!=null)
+						methodsCollection.add(methods.endNode());
+				}
+				else
+					break;
+			}
+			methodNodesInClassNode.put(node, methodsCollection);
+		}
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return methodsCollection;
 	}
 	
-	public Node getMethodContainer(Node node)
+	public boolean checkIfClassHasMethod(Node classNode, String methodExactName)
 	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
+		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		IndexHits<Node> hits = methodIndex.query("id", name);
+		if(hits.size()>0)
+			return true;
+		else
+			return false;
+	}
+	
+	public IndexHits<Node> getMethodNodesInClassNode (Node classNode, String methodExactName)
+	{
+		long start = System.nanoTime(); 
+		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		IndexHits<Node> hits = methodIndex.query("id", name);
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + classNode.getProperty("id")+"."+methodExactName +" : " + String.valueOf((double)(end-start)/(1000000000)));
+		return hits;
+	}
+	
+	public Node getMethodContainer(Node node, HashMap<Node, Node> methodContainerCache)
+	{
+		long start = System.nanoTime(); 
 		Node container = null;
-		for ( Path containerNode : traverser )
+		if(methodContainerCache.containsKey(node))
 		{
-			if(containerNode.length()==1)
-			{
-				if(containerNode.endNode()!=null)
-					container = containerNode.endNode();
-			}
-			else
-				break;
+			container = methodContainerCache.get(node);
+			System.out.println("Cache hit method container");
 		}
+		else
+		{
+			TraversalDescription td = Traversal.description()
+					.breadthFirst()
+					.relationships( RelTypes.IS_METHOD, Direction.OUTGOING )
+					.evaluator( Evaluators.excludeStartPosition() );
+			Traverser paths = td.traverse( node );
+			for ( Path path : paths )
+			{
+				if(path.length() == 1)
+				{
+					if(path.endNode()!=null)
+					{
+						container = path.endNode();
+						methodContainerCache.put(node, container);
+						break;
+					}
+				}
+				else
+					break;
+			}
+		}
+		
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id")+ " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return container;
 	}
-	public Node getMethodReturn(Node node)
+	
+	public Node getMethodReturn(Node node, HashMap<Node, Node> methodReturnCache)
 	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.RETURN_TYPE, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
-		Node container = null;
-		for ( Path containerNode : traverser )
+		long start = System.nanoTime(); 
+		Node returnNode = null;
+		if(methodReturnCache.containsKey(node))
 		{
-			if(containerNode.length()==1)
-			{
-				container = containerNode.endNode();
-			}
-			else
-				break;
+			returnNode = methodReturnCache.get(node);
+			System.out.println("Cache hit method return");
 		}
-		return container;
+		else
+		{
+			TraversalDescription td = Traversal.description()
+					.breadthFirst()
+					.relationships( RelTypes.RETURN_TYPE, Direction.OUTGOING )
+					.evaluator( Evaluators.excludeStartPosition() );
+			Traverser traverser = td.traverse( node );
+			for ( Path containerNode : traverser )
+			{
+				if(containerNode.length()==1)
+				{
+					returnNode = containerNode.endNode();
+					break;
+				}
+				else
+					break;
+			}
+		}
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + returnNode.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		return returnNode;
 	}
-	public TreeSet<Node> getMethodParams(Node node) 
+	
+	public TreeSet<Node> getMethodParams(Node node, HashMap<Node, TreeSet<Node>> methodParameterCache) 
 	{
-		TraversalDescription td = Traversal.description()
-				.breadthFirst()
-				.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
-				.evaluator( Evaluators.excludeStartPosition() );
-		Traverser traverser = td.traverse( node );
+		long start = System.nanoTime();
+		
 		TreeSet<Node> paramNodesCollection = new TreeSet<Node>(new Comparator<Node>(){
 			public int compare(Node a, Node b)
 			{
@@ -320,15 +333,32 @@ public class GraphDatabase
 			
 		});
 		
-		for ( Path paramNode : traverser )
+		if(methodParameterCache.containsKey(node))
 		{
-			if(paramNode.length()==1)
-			{
-				paramNodesCollection.add(paramNode.endNode());
-			}
-			else
-				break;
+			paramNodesCollection = methodParameterCache.get(node);
+			System.out.println("Cache hit method parameters");
 		}
+		else
+		{
+			TraversalDescription td = Traversal.description()
+					.breadthFirst()
+					.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
+					.evaluator( Evaluators.excludeStartPosition() );
+			Traverser traverser = td.traverse( node );
+			
+			for ( Path paramNode : traverser )
+			{
+				if(paramNode.length()==1)
+				{
+					paramNodesCollection.add(paramNode.endNode());
+				}
+				else
+					break;
+			}
+			methodParameterCache.put(node, paramNodesCollection);
+		}
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return paramNodesCollection;
 	}
 	
@@ -351,7 +381,8 @@ public class GraphDatabase
 			}
 		} );
 	}
-	/*private Node getUltimateParent(final Node node )
+	
+	private Node getUltimateParent(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
@@ -367,11 +398,13 @@ public class GraphDatabase
 			}
 		}
 		return answer;
-	}*/
-	public HashSet<Node> getParents(final Node node )
+	}
+	
+	public ArrayList<Node> getParents(final Node node )
 	{
+		long start = System.nanoTime(); 
 		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
-		HashSet<Node> classElementCollection = new HashSet<Node>();
+		ArrayList<Node> classElementCollection = new ArrayList<Node>();
 		for(Node candidate : candidateNodes)
 		{
 			if(candidate!=null)
@@ -383,6 +416,8 @@ public class GraphDatabase
 				}
 			}
 		}
+		long end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return classElementCollection;
 	}
 
