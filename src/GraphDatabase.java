@@ -67,7 +67,7 @@ public class GraphDatabase
 		((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
 		//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
 		((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);
-		registerShutdownHook();
+		//registerShutdownHook();
 	}
 	
 	public String getCurrentMethodName()
@@ -317,6 +317,7 @@ public class GraphDatabase
 			}
 		}
 		long end = System.nanoTime();
+		if(returnNode!=null)
 		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + returnNode.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return returnNode;
 	}
@@ -362,27 +363,15 @@ public class GraphDatabase
 		return paramNodesCollection;
 	}
 	
-	private void shutdown()
+	void shutdown()
 	{
+		System.out.println("graph shutdown");
 		graphDb.shutdown();
 	}
 		
-	private void registerShutdownHook()
-	{
-		// Registers a shutdown hook for the Neo4j and index service instances
-		// so that it shuts down nicely when the VM exits (even if you
-		// "Ctrl-C" the running example before it's completed)
-		Runtime.getRuntime().addShutdownHook( new Thread()
-		{
-			@Override
-			public void run()
-			{
-				shutdown();
-			}
-		} );
-	}
 	
-	private Node getUltimateParent(final Node node )
+	
+	public Node getUltimateParent(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
 				.breadthFirst()
