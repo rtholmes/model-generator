@@ -83,7 +83,7 @@ public class GraphDatabase
 		if(candidateNodesCache.containsKey(className))
 		{
 			candidateClassCollection = candidateNodesCache.get(className);
-			System.out.println("cache hit class!");
+			//System.out.println("cache hit class!");
 		}
 		else
 		{
@@ -98,7 +98,7 @@ public class GraphDatabase
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + className + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + className + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return candidateClassCollection;
 	}
 	
@@ -109,7 +109,7 @@ public class GraphDatabase
 		if(candidateMethodNodesCache.containsKey(methodName))
 		{
 			candidateMethodNodes = candidateMethodNodesCache.get(methodName);
-			System.out.println("cache hit method!");
+			//System.out.println("cache hit method!");
 		}
 		else
 		{
@@ -124,7 +124,7 @@ public class GraphDatabase
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + methodName + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + methodName + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return candidateMethodNodes;
 	}
 	
@@ -178,7 +178,7 @@ public class GraphDatabase
 			}
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
 	
@@ -205,7 +205,7 @@ public class GraphDatabase
 		if(methodNodesInClassNode.containsKey(node))
 		{
 			methodsCollection = methodNodesInClassNode.get(node);
-			System.out.println("Cache hit methods in class");
+			//System.out.println("Cache hit methods in class");
 		}
 		else
 		{
@@ -228,7 +228,7 @@ public class GraphDatabase
 			methodNodesInClassNode.put(node, methodsCollection);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return methodsCollection;
 	}
 	
@@ -248,7 +248,7 @@ public class GraphDatabase
 		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
 		IndexHits<Node> hits = methodIndex.query("id", name);
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + classNode.getProperty("id")+"."+methodExactName +" : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + classNode.getProperty("id")+"."+methodExactName +" : " + String.valueOf((double)(end-start)/(1000000000)));
 		return hits;
 	}
 	
@@ -259,7 +259,7 @@ public class GraphDatabase
 		if(methodContainerCache.containsKey(node))
 		{
 			container = methodContainerCache.get(node);
-			System.out.println("Cache hit method container");
+			//System.out.println("Cache hit method container");
 		}
 		else
 		{
@@ -285,7 +285,7 @@ public class GraphDatabase
 		}
 		
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id")+ " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id")+ " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return container;
 	}
 	
@@ -296,7 +296,7 @@ public class GraphDatabase
 		if(methodReturnCache.containsKey(node))
 		{
 			returnNode = methodReturnCache.get(node);
-			System.out.println("Cache hit method return");
+			//System.out.println("Cache hit method return");
 		}
 		else
 		{
@@ -317,8 +317,8 @@ public class GraphDatabase
 			}
 		}
 		long end = System.nanoTime();
-		if(returnNode!=null)
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + returnNode.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//if(returnNode!=null)
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + returnNode.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return returnNode;
 	}
 	
@@ -337,7 +337,7 @@ public class GraphDatabase
 		if(methodParameterCache.containsKey(node))
 		{
 			paramNodesCollection = methodParameterCache.get(node);
-			System.out.println("Cache hit method parameters");
+			//System.out.println("Cache hit method parameters");
 		}
 		else
 		{
@@ -359,13 +359,13 @@ public class GraphDatabase
 			methodParameterCache.put(node, paramNodesCollection);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return paramNodesCollection;
 	}
 	
 	void shutdown()
 	{
-		System.out.println("graph shutdown");
+		//System.out.println("graph shutdown");
 		graphDb.shutdown();
 	}
 		
@@ -406,7 +406,7 @@ public class GraphDatabase
 			}
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return classElementCollection;
 	}
 
