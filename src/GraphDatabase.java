@@ -8,6 +8,7 @@ import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
@@ -16,7 +17,9 @@ import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.index.impl.lucene.LuceneIndex;
+import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.tooling.GlobalGraphOperations;
 
 
 public class GraphDatabase
@@ -30,6 +33,7 @@ public class GraphDatabase
 	public Index<Node> shortClassIndex ;
 	public Index<Node> shortMethodIndex ;
 	public Index<Node> parentIndex;
+	public Index<Node> allParentsNodeIndex;
 	
 	private static enum RelTypes implements RelationshipType
 	{
@@ -59,17 +63,28 @@ public class GraphDatabase
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		
 		parentIndex = graphDb.index().forNodes("parents");
+		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
 		
-		//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
+		/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
 		//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
 		//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
 		((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
 		((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
 		//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
-		((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);
-		//registerShutdownHook();
+		((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
+		registerShutdownHook();
 	}
 	
+	private static void registerShutdownHook()
+	{
+		Runtime.getRuntime().addShutdownHook( new Thread()
+		{
+			public void run()
+			{
+				shutdown();
+			}
+		} );
+	}
 	public String getCurrentMethodName()
 	{
 	     StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
@@ -131,54 +146,22 @@ public class GraphDatabase
 	
 	public boolean checkIfParentNode(Node parentNode, String childId)
 	{
-		
-		/*Collection<Node> candidateChildren = new HashSet<Node>();
-		if(childId.contains(".")==false)
-		{
-			candidateChildren.addAll(getCandidateClassNodes(childId));
-		}
-		else
-		{
-			Node candidate = classIndex.get("id", childId).getSingle();
-			candidateChildren.add(candidate);
-		}
-		for(Node child : candidateChildren)
-		{
-			TraversalDescription td = Traversal.description()
-					.breadthFirst()
-					.relationships( RelTypes.PARENT, Direction.OUTGOING )
-					.evaluator( Evaluators.excludeStartPosition() );
-			Traverser traverser = td.traverse( child );
-			
-			for ( Path parentPath : traverser )
-			{
-					if(parentPath.endNode().getProperty("id").equals(parentNode.getProperty("id")))
-					{
-						//System.out.println("isParent");
-						return true;
-					}
-			}
-		}*/
-		//System.out.println("isNotParent");
 		long start = System.nanoTime(); 
-		IndexHits<Node> candidateNodes = parentIndex.get("parent", childId);
+		String parentId = (String) parentNode.getProperty("id");
+		IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
+		long end;
 		for(Node candidate : candidateNodes)
 		{
-			if(candidate!=null)
+			if(((String)candidate.getProperty("id")).equals(parentId))
 			{
-				if(candidate.equals(parentNode))
-					return true;
-				else
-				{
-					Collection<Node> parents = getParents(candidate);
-					for(Node pnode : parents)
-						if(candidate.equals(pnode))
-							return true;
-				}
+				end = System.nanoTime();
+				System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
+				return true;
 			}
 		}
-		long end = System.nanoTime();
-		//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		
+		end = System.nanoTime();
+		System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
 	
@@ -363,9 +346,9 @@ public class GraphDatabase
 		return paramNodesCollection;
 	}
 	
-	void shutdown()
+	static void shutdown()
 	{
-		//System.out.println("graph shutdown");
+		System.out.println("graph shutdown");
 		graphDb.shutdown();
 	}
 		
@@ -392,21 +375,15 @@ public class GraphDatabase
 	public ArrayList<Node> getParents(final Node node )
 	{
 		long start = System.nanoTime(); 
-		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
+		String childId = (String) node.getProperty("id");
+		IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
 		ArrayList<Node> classElementCollection = new ArrayList<Node>();
 		for(Node candidate : candidateNodes)
 		{
-			if(candidate!=null)
-			{
-				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-				{
-					classElementCollection.add(candidate);
-					classElementCollection.addAll(getParents(candidate));
-				}
-			}
+			classElementCollection.add(candidate);
 		}
 		long end = System.nanoTime();
-		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return classElementCollection;
 	}
 
