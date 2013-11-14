@@ -155,13 +155,13 @@ public class GraphDatabase
 			if(((String)candidate.getProperty("id")).equals(parentId))
 			{
 				end = System.nanoTime();
-				System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
+				//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 				return true;
 			}
 		}
 		
 		end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
 	
@@ -348,7 +348,7 @@ public class GraphDatabase
 	
 	static void shutdown()
 	{
-		System.out.println("graph shutdown");
+		//System.out.println("graph shutdown");
 		graphDb.shutdown();
 	}
 		
@@ -383,7 +383,7 @@ public class GraphDatabase
 			classElementCollection.add(candidate);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return classElementCollection;
 	}
 
