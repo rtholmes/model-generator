@@ -22,6 +22,7 @@ import org.neo4j.kernel.Traversal;
 import org.neo4j.tooling.GlobalGraphOperations;
 
 
+
 public class GraphDatabase
 {
 	static GraphDatabaseService graphDb;
@@ -51,28 +52,28 @@ public class GraphDatabase
 		HAS_FIELD_TYPE
 	}
 	
-	public GraphDatabase(String input_oracle) 
+	public GraphDatabase(String input_oracle) throws StoreLockException
 	{
 		DB_PATH = input_oracle;
-		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+			graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+			classIndex = graphDb.index().forNodes("classes");
+			methodIndex = graphDb.index().forNodes("methods");
+			
+			shortClassIndex = graphDb.index().forNodes("short_classes");
+			shortMethodIndex = graphDb.index().forNodes("short_methods");
+			
+			parentIndex = graphDb.index().forNodes("parents");
+			allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
+			
+			/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
+			//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
+			//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
+			((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
+			((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
+			//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
+			((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
+			registerShutdownHook();
 		
-		classIndex = graphDb.index().forNodes("classes");
-		methodIndex = graphDb.index().forNodes("methods");
-		
-		shortClassIndex = graphDb.index().forNodes("short_classes");
-		shortMethodIndex = graphDb.index().forNodes("short_methods");
-		
-		parentIndex = graphDb.index().forNodes("parents");
-		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
-		
-		/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
-		//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
-		//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
-		((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
-		((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
-		//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
-		((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
-		registerShutdownHook();
 	}
 	
 	private static void registerShutdownHook()
@@ -164,7 +165,23 @@ public class GraphDatabase
 		//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
-	
+	public static String escapeForLucene(String input)
+	{
+		StringBuilder output = new StringBuilder();
+		for(int i=0; i<input.length(); i++)
+		{
+			char x = input.charAt(i);
+			if(x=='[' || x==']' || x=='+' || x=='^' || x=='"' || x=='?')
+			{
+				output.append("\\"+x);
+			}
+			else
+			{
+				output.append(x);
+			}
+		}
+		return output.toString();
+	}
 	public ArrayList<String> getClassChildrenNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
@@ -218,6 +235,7 @@ public class GraphDatabase
 	public boolean checkIfClassHasMethod(Node classNode, String methodExactName)
 	{
 		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		name = escapeForLucene(name);
 		IndexHits<Node> hits = methodIndex.query("id", name);
 		if(hits.size()>0)
 			return true;
@@ -229,6 +247,7 @@ public class GraphDatabase
 	{
 		long start = System.nanoTime(); 
 		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		name = escapeForLucene(name);
 		IndexHits<Node> hits = methodIndex.query("id", name);
 		long end = System.nanoTime();
 		//System.out.println(getCurrentMethodName() + " - " + classNode.getProperty("id")+"."+methodExactName +" : " + String.valueOf((double)(end-start)/(1000000000)));
