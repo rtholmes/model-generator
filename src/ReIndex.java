@@ -41,7 +41,6 @@ public class ReIndex
 	private static Index<Node> nodeParents;
 	private static Index<Node> allMethodsIndex;
 	private static Index<Node> shortClassIndex;
-	private static Index<Node> allParentsNodeIndex;
 	
 	public static void main(String[] args)
 	{
@@ -49,14 +48,29 @@ public class ReIndex
 
 		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
 		shortClassIndex = graphDb.index().forNodes("short_classes");
-		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
 		registerShutdownHook();
 		int count = 0;
 
 		IndexHits<Node> classes = shortClassIndex.query("short_name", "*");
 		
+
+		/*Transaction tx1 = graphDb.beginTx();
+		try
+		{
+			allMethodsIndex.delete();
+			tx1.success();
+		}
+		finally
+		{
+			tx1.finish();
+		}
+		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+		*/
+		
 		IndexHits<Node> test = allMethodsIndex.query("classId", "*");
 		System.out.println(test.size());
+		
+		int size = 0;
 		
 		for(Node classnode : classes)
 		{
@@ -65,12 +79,14 @@ public class ReIndex
 			{
 				String classId = (String) classnode.getProperty("id");
 				ArrayList<Node> methods = getMethodNodes(classnode);
+				
 				for(Node method : methods)
 				{
 					Transaction tx0 = graphDb.beginTx();
 					try
 					{
-						allMethodsIndex.putIfAbsent(method, "classId", classId);
+						//allMethodsIndex.add(method, "classId", classId);
+						size++;
 						tx0.success();
 					}
 					finally
@@ -78,9 +94,10 @@ public class ReIndex
 						tx0.finish();
 					}
 				}
-				System.out.println(classId + " : " + methods);
+				System.out.println(classId + " noactually: " + methods.size() + " countsofar: " + size);
 			}
 		}
+		System.out.println(size);
 	}
 
 	public static ArrayList<Node> getMethodNodes(Node node)

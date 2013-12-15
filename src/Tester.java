@@ -32,6 +32,7 @@ public class Tester
 	public static Index<Node> shortFieldIndex ;
 	public static Index<Node> parentIndex ;
 	public static Index<Node> allParentsNodeStringIndex;
+	public static Index<Node> allMethodsIndex;
 	public static String getClassId(String id)	//to store class name and exact method name as ivars
 	{
 		String _className = null;
@@ -73,7 +74,6 @@ public class Tester
 	{
 		try
 		{
-			System.out.println("here0");
 			try
 			{
 				graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
@@ -83,7 +83,6 @@ public class Tester
 				System.out.println("Database Locked");
 				//e.printStackTrace();
 			}
-			System.out.println("here1");
 			classIndex = graphDb.index().forNodes("classes");
 			methodIndex = graphDb.index().forNodes("methods");
 			fieldIndex = graphDb.index().forNodes("fields");
@@ -95,7 +94,8 @@ public class Tester
 			shortFieldIndex = graphDb.index().forNodes("short_fields");
 			parentIndex = graphDb.index().forNodes("parents");
 			allParentsNodeStringIndex = graphDb.index().forNodes("allParentsString");
-			
+			allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+
 			/*IndexHits<Node> hits = shortClassIndex.get("short_name", "HashMap");
 			for(Node hit : hits)
 			{
@@ -107,7 +107,7 @@ public class Tester
 				}
 			}
 			System.out.println(hits.size());*/
-			IndexHits<Node> methods = shortClassIndex.get("short_name", "Chronometer");
+			/*IndexHits<Node> methods = shortClassIndex.get("short_name", "Chronometer");
 			HashSet<String> test = new HashSet<String>();
 			for(Node method : methods)
 			{
@@ -116,7 +116,25 @@ public class Tester
 				System.out.println(s);
 			}
 			System.out.println(methods.size());
-			System.out.println(test.size());
+			System.out.println(test.size());*/
+			
+			IndexHits<Node> methods = allMethodsIndex.query("classId", "*");
+			/*for(Node method : methods)
+			{
+				System.out.println(method.getProperty("id"));
+			}*/
+			
+			/*IndexHits<Node>strings =  classIndex.get("id", "java.lang.String");
+			Node stringnode = strings.getSingle();
+			HashSet<Node> methodnodes = getMethodNodes(stringnode);
+			for(Node m : methodnodes)
+			{
+				System.out.println(m.getProperty("id"));
+			}
+			System.out.println(methodnodes.size());
+			IndexHits<Node> methods2 = shortMethodIndex.query("short_name", "*");*/
+			System.out.println(methods.size());
+			
 		registerShutdownHook();
 
 		}

@@ -28,13 +28,15 @@ public class GraphDatabase
 	static GraphDatabaseService graphDb;
 	private static String DB_PATH;
 	
-	public Index<Node> classIndex ;
-	public Index<Node> methodIndex ;
+	private Index<Node> classIndex ;
+	private Index<Node> methodIndex ;
 	
-	public Index<Node> shortClassIndex ;
-	public Index<Node> shortMethodIndex ;
-	public Index<Node> parentIndex;
-	public Index<Node> allParentsNodeIndex;
+	private Index<Node> shortClassIndex ;
+	private Index<Node> shortMethodIndex ;
+	private Index<Node> parentIndex;
+	private Index<Node> allParentsNodeIndex;
+	private Index<Node> allMethodsIndex;
+
 	
 	private static enum RelTypes implements RelationshipType
 	{
@@ -55,24 +57,25 @@ public class GraphDatabase
 	public GraphDatabase(String input_oracle) throws StoreLockException
 	{
 		DB_PATH = input_oracle;
-			graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
-			classIndex = graphDb.index().forNodes("classes");
-			methodIndex = graphDb.index().forNodes("methods");
-			
-			shortClassIndex = graphDb.index().forNodes("short_classes");
-			shortMethodIndex = graphDb.index().forNodes("short_methods");
-			
-			parentIndex = graphDb.index().forNodes("parents");
-			allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
-			
-			/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
+		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+		classIndex = graphDb.index().forNodes("classes");
+		methodIndex = graphDb.index().forNodes("methods");
+
+		shortClassIndex = graphDb.index().forNodes("short_classes");
+		shortMethodIndex = graphDb.index().forNodes("short_methods");
+
+		parentIndex = graphDb.index().forNodes("parents");
+		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
+		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+
+		/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
 			//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
 			//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
 			((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
 			((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
 			//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
 			((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
-			registerShutdownHook();
+		registerShutdownHook();
 		
 	}
 	
@@ -86,7 +89,7 @@ public class GraphDatabase
 			}
 		} );
 	}
-	public String getCurrentMethodName()
+	private String getCurrentMethodName()
 	{
 	     StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
 	     return stackTraceElements[1].toString();
@@ -165,7 +168,9 @@ public class GraphDatabase
 		//System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return false;
 	}
-	public static String escapeForLucene(String input)
+	
+	
+	private static String escapeForLucene(String input)
 	{
 		StringBuilder output = new StringBuilder();
 		for(int i=0; i<input.length(); i++)
@@ -182,6 +187,8 @@ public class GraphDatabase
 		}
 		return output.toString();
 	}
+	
+	@Deprecated
 	public ArrayList<String> getClassChildrenNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
@@ -209,7 +216,21 @@ public class GraphDatabase
 		}
 		else
 		{
-			TraversalDescription td = Traversal.description()
+			String classId = (String) node.getProperty("id");
+			IndexHits<Node> methods = allMethodsIndex.get("classId", classId);
+			methodsCollection = new ArrayList<Node>();
+			
+			for(Node method : methods)
+			{
+				if(method!=null)
+					if(((String)method.getProperty("vis")).equals("PUBLIC")==true || ((String)method.getProperty("vis")).equals("NOTSET")==true)
+					{
+						methodsCollection.add(method);
+					}
+			}
+			methodNodesInClassNode.put(node, methodsCollection);
+			
+			/*TraversalDescription td = Traversal.description()
 					.breadthFirst()
 					.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
 					.evaluator( Evaluators.excludeStartPosition() );
@@ -226,6 +247,7 @@ public class GraphDatabase
 					break;
 			}
 			methodNodesInClassNode.put(node, methodsCollection);
+			*/
 		}
 		long end = System.nanoTime();
 		//System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
