@@ -16,6 +16,7 @@ public class Logger
 		flag = 0;
 	}
 	
+	
 	public void disableAccessTimes()
 	{
 		accessTimeFlag = 0;

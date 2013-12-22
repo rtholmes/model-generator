@@ -1,4 +1,6 @@
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.neo4j.graphdb.Direction;
@@ -6,7 +8,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
@@ -19,6 +20,7 @@ import org.neo4j.kernel.Traversal;
 
 
 
+
 public class Tester
 {
 	private static GraphDatabaseService graphDb;
@@ -26,14 +28,15 @@ public class Tester
 	public static Index<Node> classIndex ;
 	public static Index<Node> methodIndex ;
 	public static Index<Node> fieldIndex ;
-	
+
 	public static Index<Node> shortClassIndex ;
 	public static Index<Node> shortMethodIndex ;
 	public static Index<Node> shortFieldIndex ;
 	public static Index<Node> parentIndex ;
 	public static Index<Node> allParentsNodeStringIndex;
 	public static Index<Node> allMethodsIndex;
-	public static String getClassId(String id)	//to store class name and exact method name as ivars
+	
+	public static String getClassId(String id)
 	{
 		String _className = null;
 		if (id.endsWith("<clinit>"))
@@ -48,10 +51,10 @@ public class Tester
 			String className = array[0];		
 			for (int i=1; i<array.length-1; i++) className += "." + array[i];
 			_className = className;
-	 	}
+		}
 		return _className;
-		
 	}
+	
 	private static enum RelTypes implements RelationshipType
 	{
 		PARENT,
@@ -68,8 +71,6 @@ public class Tester
 		HAS_FIELD_TYPE
 	}
 
-	
-	
 	public static void main(String[] args) throws IOException
 	{
 		try
@@ -81,14 +82,13 @@ public class Tester
 			catch(Exception e)
 			{
 				System.out.println("Database Locked");
-				//e.printStackTrace();
 			}
 			classIndex = graphDb.index().forNodes("classes");
 			methodIndex = graphDb.index().forNodes("methods");
 			fieldIndex = graphDb.index().forNodes("fields");
-			
-			
-			
+
+
+
 			shortClassIndex = graphDb.index().forNodes("short_classes");
 			shortMethodIndex = graphDb.index().forNodes("short_methods");
 			shortFieldIndex = graphDb.index().forNodes("short_fields");
@@ -96,52 +96,76 @@ public class Tester
 			allParentsNodeStringIndex = graphDb.index().forNodes("allParentsString");
 			allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
 
-			/*IndexHits<Node> hits = shortClassIndex.get("short_name", "HashMap");
-			for(Node hit : hits)
-			{
-				System.out.println(hit.getProperty("id"));
-				HashSet<Node> methods = getMethodNodes(hit);
-				for(Node method : methods)
-				{
-					System.out.println("-- "+method.getProperty("id"));
-				}
-			}
-			System.out.println(hits.size());*/
-			/*IndexHits<Node> methods = shortClassIndex.get("short_name", "Chronometer");
-			HashSet<String> test = new HashSet<String>();
-			for(Node method : methods)
-			{
-				String s = (String)method.getProperty("id");
-				test.add(s);
-				System.out.println(s);
-			}
-			System.out.println(methods.size());
-			System.out.println(test.size());*/
-			
-			IndexHits<Node> methods = allMethodsIndex.query("classId", "*");
-			/*for(Node method : methods)
-			{
-				System.out.println(method.getProperty("id"));
-			}*/
-			
-			/*IndexHits<Node>strings =  classIndex.get("id", "java.lang.String");
-			Node stringnode = strings.getSingle();
-			HashSet<Node> methodnodes = getMethodNodes(stringnode);
-			for(Node m : methodnodes)
+			Node StringNode = classIndex.get("id", "android.test.IsolatedContext").getSingle();
+
+			System.out.println("---");
+			ArrayList<Node> methods = getParents(StringNode, new HashMap<String, ArrayList<Node>>());
+			for(Node m : methods)
 			{
 				System.out.println(m.getProperty("id"));
 			}
-			System.out.println(methodnodes.size());
-			IndexHits<Node> methods2 = shortMethodIndex.query("short_name", "*");*/
-			System.out.println(methods.size());
+			System.out.println("---");
+			ArrayList<Node> methods2 = getAllParents("android.test.IsolatedContext", new HashSet<String>());
+			for(Node method: methods2)
+			{
+				System.out.println((String)method.getProperty("id") + " : " + method.getId());
+			}
+			System.out.println("---");
 			
-		registerShutdownHook();
+			ArrayList<String> methods3 = getClassParentNodes(StringNode);
+			for(String s : methods3)
+			{
+				System.out.println(s);
+			}
+			
 
+			registerShutdownHook();
 		}
 		catch(Exception e)
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	public static ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	{
+		String childId = (String) node.getProperty("id");
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
+		{
+			classElementCollection = parentNodeCache.get(childId);
+		}
+		else
+		{
+			IndexHits<Node> candidateNodes = allParentsNodeStringIndex.get("parent", childId);
+			System.out.println(candidateNodes.size());
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			Node object = classIndex.get("id", "java.lang.Object").getSingle();
+			classElementCollection.add(object);
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		
+		return classElementCollection;
+	}
+	
+	public static ArrayList<String> getClassParentNodes(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser childTraverser = td.traverse( node );
+		ArrayList<String> childCollection = new ArrayList<String>();;
+		for ( Path child : childTraverser )
+		{
+			if(child.endNode()!=null)
+				childCollection.add((String) child.endNode().getProperty("id"));
+		}
+		return childCollection;
 	}
 	
 	public static boolean checkIfClassHasMethod(Node classNode, String methodExactName)
@@ -154,7 +178,7 @@ public class Tester
 		}
 		return false;
 	}
-	
+
 	public static Node getMethodContainer(Node node)
 	{
 		TraversalDescription td = Traversal.description()
@@ -178,7 +202,7 @@ public class Tester
 		}
 		return container;
 	}
-	
+
 	private static HashSet<Node> getMethodNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
@@ -200,7 +224,7 @@ public class Tester
 		}
 		return methodsCollection;
 	}
-	
+
 	public static Node getMethodReturn(Node node)
 	{
 		long start = System.nanoTime(); 
@@ -225,12 +249,30 @@ public class Tester
 		System.out.println("getMethodReturn" + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
 		return container;
 	}
-	
+	public static ArrayList<Node> getAllParents(String className, HashSet<String> parentNames )
+	{
+		IndexHits<Node> candidateNodes = parentIndex.get("parent", className);
+		ArrayList<Node> classElementCollection = new ArrayList<Node>();
+		for(Node candidate : candidateNodes)
+		{
+			if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+			{
+				String _cid = (String) candidate.getProperty("id");
+				if(parentNames.contains(_cid) == false)
+				{
+					parentNames.add(_cid);
+					classElementCollection.add(candidate);
+					classElementCollection.addAll(getAllParents(_cid, parentNames));
+				}
+			}
+		}
+		return classElementCollection;
+	}
 	private static void shutdown()
 	{
 		graphDb.shutdown();
 	}
-	
+
 	private static void registerShutdownHook()
 	{
 		Runtime.getRuntime().addShutdownHook( new Thread()

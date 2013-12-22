@@ -1,7 +1,6 @@
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
@@ -27,6 +26,7 @@ public class GraphDatabase
 
 	private Index<Node> methodIndex ;
 
+	private Index<Node> allClassIndex;
 	private Index<Node> shortClassIndex ;
 	private Index<Node> shortMethodIndex ;
 	private Index<Node> allParentsNodeIndex;
@@ -53,7 +53,11 @@ public class GraphDatabase
 	{
 		DB_PATH = input_oracle;
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
-
+		
+		logger.disableAccessTimes();
+		logger.disableCacheHit();
+		
+		allClassIndex = graphDb.index().forNodes("classes");
 		methodIndex = graphDb.index().forNodes("methods");
 		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
@@ -66,19 +70,8 @@ public class GraphDatabase
 			((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
 			//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
 			((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
-		registerShutdownHook();
 	}
 
-	private static void registerShutdownHook()
-	{
-		Runtime.getRuntime().addShutdownHook( new Thread()
-		{
-			public void run()
-			{
-				shutdown();
-			}
-		} );
-	}
 	private String getCurrentMethodName()
 	{
 		StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
@@ -138,36 +131,54 @@ public class GraphDatabase
 	}
 
 
-	public boolean checkIfParentNode(Node parentNode, String childId, HashMap<String, IndexHits<Node>> parentNodeCache)
+	public boolean checkIfParentNode(Node parentNode, String childId, HashMap<String, ArrayList<Node>> parentNodeCache)
 	{
 		long start = System.nanoTime();
-
+		
+		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
+		{
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return true;
+		}
 		String parentId = (String) parentNode.getProperty("id");
-		IndexHits<Node> candidateNodes;
 		if(parentNodeCache.containsKey(childId))
 		{
-			candidateNodes = parentNodeCache.get(childId);
 			logger.printIfCacheHit("parent list found in cache");
+			ArrayList<Node>parents = parentNodeCache.get(childId);
+			for(Node parent : parents)
+			{
+				if(((String)parent.getProperty("id")).equals(parentId))
+				{
+					long end = System.nanoTime();
+					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+					return true;
+				}
+			}
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return false;
 		}
 		else
 		{
-			candidateNodes = allParentsNodeIndex.get("parent", childId);
-			parentNodeCache.put(childId, candidateNodes);
-		}
-		long end;
-		for(Node candidate : candidateNodes)
-		{
-			if(((String)candidate.getProperty("id")).equals(parentId))
+			boolean ans = false;
+			IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
+			ArrayList<Node> parentList = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
 			{
-				end = System.nanoTime();
-				logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
-				return true;
+				parentList.add(candidate);
+				if(((String)candidate.getProperty("id")).equals(parentId))
+				{
+					ans = true;
+				}
 			}
+			Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
+			parentList.add(object);
+			parentNodeCache.put(childId, parentList);
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return ans;
 		}
-
-		end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
-		return false;
 	}
 
 
@@ -414,7 +425,7 @@ public class GraphDatabase
 		return paramNodesCollection;
 	}
 
-	static void shutdown()
+	void shutdown()
 	{
 		graphDb.shutdown();
 	}
@@ -439,16 +450,28 @@ public class GraphDatabase
 		return answer;
 	}
 
-	public ArrayList<Node> getParents(final Node node )
+	public ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
 		String childId = (String) node.getProperty("id");
-		IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
-		ArrayList<Node> classElementCollection = new ArrayList<Node>();
-		for(Node candidate : candidateNodes)
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
 		{
-			classElementCollection.add(candidate);
+			classElementCollection = parentNodeCache.get(childId);
 		}
+		else
+		{
+			IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
+			classElementCollection.add(object);
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
