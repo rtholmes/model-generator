@@ -31,6 +31,8 @@ public class GraphDatabase
 	private Index<Node> shortMethodIndex ;
 	private Index<Node> allParentsNodeIndex;
 	private Index<Node> allMethodsIndex;
+	
+	private Index<Node> newParentsIndex;
 	public Logger logger = new Logger();
 
 	private static enum RelTypes implements RelationshipType
@@ -63,6 +65,9 @@ public class GraphDatabase
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
 		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+		
+		newParentsIndex = graphDb.index().forNodes("parentNodes");
+		
 		/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
 			//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
 			//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
@@ -162,7 +167,7 @@ public class GraphDatabase
 		else
 		{
 			boolean ans = false;
-			IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
+			IndexHits<Node> candidateNodes = newParentsIndex.get("childId", childId);
 			ArrayList<Node> parentList = new ArrayList<Node>();
 			for(Node candidate : candidateNodes)
 			{
@@ -172,8 +177,8 @@ public class GraphDatabase
 					ans = true;
 				}
 			}
-			Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
-			parentList.add(object);
+			//Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
+			//parentList.add(object);
 			parentNodeCache.put(childId, parentList);
 			long end = System.nanoTime();
 			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
@@ -384,17 +389,11 @@ public class GraphDatabase
 		return returnNode;
 	}
 
-	public TreeSet<Node> getMethodParams(Node node, HashMap<Node, TreeSet<Node>> methodParameterCache) 
+	public ArrayList<Node> getMethodParams(Node node, HashMap<Node, ArrayList<Node>> methodParameterCache) 
 	{
 		long start = System.nanoTime();
 
-		TreeSet<Node> paramNodesCollection = new TreeSet<Node>(new Comparator<Node>(){
-			public int compare(Node a, Node b)
-			{
-				return (Integer)a.getProperty("paramIndex")-(Integer)b.getProperty("paramIndex");
-			}
-
-		});
+		ArrayList<Node> paramNodesCollection = null;
 
 		if(methodParameterCache.containsKey(node))
 		{
@@ -403,20 +402,24 @@ public class GraphDatabase
 		}
 		else
 		{
-			TraversalDescription td = Traversal.description()
-					.breadthFirst()
-					.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
-					.evaluator( Evaluators.excludeStartPosition() );
-			Traverser traverser = td.traverse( node );
-
-			for ( Path paramNode : traverser )
-			{
-				if(paramNode.length()==1)
-				{
-					paramNodesCollection.add(paramNode.endNode());
+			paramNodesCollection = new ArrayList<Node>();
+			
+			String mname = (String) node.getProperty("id");
+			mname = mname.substring(0, mname.length()-1);
+			if(mname.lastIndexOf("(") != mname.length()-1)
+			{	
+				String[] array = mname.split("\\(");
+				String paramList = array[array.length-1];
+				//System.out.println(paramList + "--");
+				if(!paramList.trim().equals(null))
+				{	
+					String[] params = paramList.split(",");
+					for(String param : params)
+					{
+						Node parameter = allClassIndex.get("id", param.trim()).getSingle();
+						paramNodesCollection.add(parameter);
+					}
 				}
-				else
-					break;
 			}
 			methodParameterCache.put(node, paramNodesCollection);
 		}
@@ -431,7 +434,7 @@ public class GraphDatabase
 	}
 
 
-
+	@Deprecated
 	public Node getUltimateParent(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
@@ -450,7 +453,7 @@ public class GraphDatabase
 		return answer;
 	}
 
-	public ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	public ArrayList<Node> getParentsOld(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
 		String childId = (String) node.getProperty("id");
@@ -476,5 +479,32 @@ public class GraphDatabase
 		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
 	}
+	
+	public ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	{
+		long start = System.nanoTime(); 
+		String childId = (String) node.getProperty("id");
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
+		{
+			classElementCollection = parentNodeCache.get(childId);
+		}
+		else
+		{
+			IndexHits<Node> candidateNodes = newParentsIndex.get("childId", childId); 
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
+		return classElementCollection;
+	}
+	
+	
+	
 
 }

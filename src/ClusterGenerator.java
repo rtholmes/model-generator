@@ -28,7 +28,7 @@ import com.google.common.collect.HashMultimap;
 
 
 
-public class GraphTest
+public class ClusterGenerator
 {
 	private static GraphDatabaseService graphDb;
 	private static final String DB_PATH = "maven-graph-database";
@@ -41,11 +41,11 @@ public class GraphTest
 	public static Index<Node> shortFieldIndex ;
 	public static Index<Node> parentIndex ;
 	
-	public static String getIdWithoutArgs(String name)	//to store class name and exact method name as ivars
+	/*public static String getIdWithoutArgs(String name)	//to store class name and exact method name as ivars
 	{
 		String[] array = name.split("\\(");
 		return array[0];
-	}
+	}*/
 	
 	public static String getPackage(String id, String cname)	//to store class name and exact method name as ivars
 	{

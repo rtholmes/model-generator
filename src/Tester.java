@@ -35,6 +35,7 @@ public class Tester
 	public static Index<Node> parentIndex ;
 	public static Index<Node> allParentsNodeStringIndex;
 	public static Index<Node> allMethodsIndex;
+	private static Index<Node> newParentsIndex;
 	
 	public static String getClassId(String id)
 	{
@@ -95,30 +96,23 @@ public class Tester
 			parentIndex = graphDb.index().forNodes("parents");
 			allParentsNodeStringIndex = graphDb.index().forNodes("allParentsString");
 			allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+			
+			/*newParentsIndex = graphDb.index().forNodes("parentNodes");
+			System.out.println(newParentsIndex.query("childId", "*").size());
 
-			Node StringNode = classIndex.get("id", "android.test.IsolatedContext").getSingle();
-
-			System.out.println("---");
-			ArrayList<Node> methods = getParents(StringNode, new HashMap<String, ArrayList<Node>>());
-			for(Node m : methods)
-			{
-				System.out.println(m.getProperty("id"));
-			}
-			System.out.println("---");
-			ArrayList<Node> methods2 = getAllParents("android.test.IsolatedContext", new HashSet<String>());
+			Node tempNode = classIndex.get("id", "java.awt.List$AccessibleAWTList$AccessibleAWTListChild").getSingle();
+			System.out.println(tempNode.getProperty("exactName"));
+			ArrayList<Node> methods2 = getParents(tempNode, new HashMap<String, ArrayList<Node>>()); 
 			for(Node method: methods2)
 			{
 				System.out.println((String)method.getProperty("id") + " : " + method.getId());
-			}
-			System.out.println("---");
+			}*/
 			
-			ArrayList<String> methods3 = getClassParentNodes(StringNode);
-			for(String s : methods3)
+			IndexHits<Node> test = shortClassIndex.get("short_name", "ASN1Object");
+			for(Node n : test)
 			{
-				System.out.println(s);
+				System.out.println(n.getProperty("id"));
 			}
-			
-
 			registerShutdownHook();
 		}
 		catch(Exception e)
@@ -127,7 +121,7 @@ public class Tester
 		}
 	}
 	
-	public static ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	public static ArrayList<Node> getParentsOld(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		String childId = (String) node.getProperty("id");
 		ArrayList<Node> classElementCollection = null;
@@ -149,6 +143,29 @@ public class Tester
 			parentNodeCache.put(childId, classElementCollection);
 		}
 		
+		return classElementCollection;
+	}
+	
+	public static ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	{
+		long start = System.nanoTime(); 
+		String childId = (String) node.getProperty("id");
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
+		{
+			classElementCollection = parentNodeCache.get(childId);
+		}
+		else
+		{
+			IndexHits<Node> candidateNodes = newParentsIndex.get("childId", childId); 
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		long end = System.nanoTime();
 		return classElementCollection;
 	}
 	

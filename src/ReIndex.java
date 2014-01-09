@@ -39,54 +39,69 @@ public class ReIndex
 	private static final String DB_PATH = "maven-graph-database";
 	private static GraphDatabaseService graphDb;
 	private static Index<Node> nodeParents;
-	private static Index<Node> allMethodsIndex;
 	private static Index<Node> shortClassIndex;
+	private static Index<Node> newParentsIndex;
+	private static Index<Node> classIndex;
 	
 	public static void main(String[] args)
 	{
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase( DB_PATH );
-
-		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+		classIndex = graphDb.index().forNodes("classes");
 		shortClassIndex = graphDb.index().forNodes("short_classes");
-		registerShutdownHook();
-		int count = 0;
-
-		IndexHits<Node> classes = shortClassIndex.query("short_name", "*");
+		nodeParents =  graphDb.index().forNodes("parents");
+		newParentsIndex = graphDb.index().forNodes("parentNodes");
 		
-
 		/*Transaction tx1 = graphDb.beginTx();
 		try
 		{
-			allMethodsIndex.delete();
+			newParentsIndex.delete();
 			tx1.success();
 		}
 		finally
 		{
 			tx1.finish();
 		}
-		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+		newParentsIndex = graphDb.index().forNodes("parentNodes");
 		*/
 		
-		IndexHits<Node> test = allMethodsIndex.query("classId", "*");
-		System.out.println(test.size());
+		registerShutdownHook();
+		int count = 0;
+		IndexHits<Node> classes = shortClassIndex.query("short_name", "*");
+		System.out.println(classes.size());
+		System.out.println(newParentsIndex.query("childId", "*").size());
 		
 		int size = 0;
-		
 		for(Node classnode : classes)
 		{
 			System.out.println(count++);
-			if(count > 0)
+			if(count > 716566)
 			{
 				String classId = (String) classnode.getProperty("id");
-				ArrayList<Node> methods = getMethodNodes(classnode);
+				System.out.println(classId);
+				HashSet<Node> parents = getAllParents(classId, new HashSet<String> ());
 				
-				for(Node method : methods)
+				for(Node parent : parents)
 				{
 					Transaction tx0 = graphDb.beginTx();
 					try
 					{
-						//allMethodsIndex.add(method, "classId", classId);
 						size++;
+						System.out.println("-- " + parent.getProperty("id"));
+						int flag = 0;
+						/*IndexHits<Node> hits = newParentsIndex.get("childId", classId);
+						for(Node hit : hits)
+						{
+							if(hit.equals(parent))
+							{
+								flag = 1;
+								break;
+							}
+						}*/
+						if(flag == 0)
+							newParentsIndex.add(parent, "childId", classId);
+						else
+							System.out.println("already indexed");
+						//newParentsIndex.add(parent, "childId", classId);
 						tx0.success();
 					}
 					finally
@@ -94,7 +109,7 @@ public class ReIndex
 						tx0.finish();
 					}
 				}
-				System.out.println(classId + " noactually: " + methods.size() + " countsofar: " + size);
+				System.out.println(classId + " no of parents: " + parents.size() + " countsofar: " + size);
 			}
 		}
 		System.out.println(size);
@@ -146,13 +161,15 @@ public class ReIndex
 	}
 
 
-	public static HashMap<String, ArrayList<Node>> cache = new HashMap<String, ArrayList<Node>>();
-	public static ArrayList<Node> getAllParents(String className, HashSet<String> parentNames )
+	public static HashMap<String, HashSet<Node>> cache = new HashMap<String, HashSet<Node>>();
+	
+	
+	public static HashSet<Node> getAllParents(String className, HashSet<String> parentNames )
 	{
 		if(cache.containsKey(className))
 			return cache.get(className);
 		IndexHits<Node> candidateNodes = nodeParents.get("parent", className);
-		ArrayList<Node> classElementCollection = new ArrayList<Node>();
+		HashSet<Node> classElementCollection = new HashSet<Node>();
 		for(Node candidate : candidateNodes)
 		{
 			if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
@@ -166,9 +183,12 @@ public class ReIndex
 				}
 			}
 		}
+		Node objectNode = classIndex.get("id", "java.lang.Object").getSingle();
+		classElementCollection.add(objectNode);
 		cache.put(className, classElementCollection);
 		return classElementCollection;
 	}
+	
 	private static void shutdown()
 	{
 		graphDb.shutdown();
