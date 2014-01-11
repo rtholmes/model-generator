@@ -1,6 +1,9 @@
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
@@ -35,6 +38,8 @@ public class GraphDatabase
 	private Index<Node> newParentsIndex;
 	public Logger logger = new Logger();
 
+	private ClusterEliminator cEliminator;
+	
 	private static enum RelTypes implements RelationshipType
 	{
 		PARENT,
@@ -51,10 +56,12 @@ public class GraphDatabase
 		HAS_FIELD_TYPE
 	}
 
-	public GraphDatabase(String input_oracle) throws StoreLockException
+	public GraphDatabase(String input_oracle) throws StoreLockException, IOException
 	{
 		DB_PATH = input_oracle;
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
+		
+		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 		
 		logger.disableAccessTimes();
 		logger.disableCacheHit();
@@ -135,6 +142,24 @@ public class GraphDatabase
 		return candidateMethodNodes;
 	}
 
+	public Node returnRightNodeIfCluster(Set<Node> set)
+	{
+		if(set.isEmpty())
+			return null;
+		if(cEliminator.checkIfCluster(set))
+		{
+			Node rightClass = cEliminator.findRightClass(set);
+			return rightClass;
+		}
+		else
+		{
+			//check if set has the originalClass from the hashmap. Maybe that is the right ans and the cluster set
+			//I created has some missing entities.
+			Node rightClass = cEliminator.findRightClass(set);
+			//return rightClass;
+		}
+		return null;
+	}
 
 	public boolean checkIfParentNode(Node parentNode, String childId, HashMap<String, ArrayList<Node>> parentNodeCache)
 	{

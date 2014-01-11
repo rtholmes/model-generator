@@ -108,7 +108,7 @@ public class Tester
 				System.out.println((String)method.getProperty("id") + " : " + method.getId());
 			}*/
 			
-			IndexHits<Node> test = shortClassIndex.get("short_name", "ASN1Object");
+			IndexHits<Node> test = shortClassIndex.get("short_name", "TaggedComponent");
 			for(Node n : test)
 			{
 				System.out.println(n.getProperty("id"));
