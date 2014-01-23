@@ -155,7 +155,7 @@ public class GraphDatabase
 		{
 			//check if set has the originalClass from the hashmap. Maybe that is the right ans and the cluster set
 			//I created has some missing entities.
-			Node rightClass = cEliminator.findRightClass(set);
+			//Node rightClass = cEliminator.findRightClass(set);
 			//return rightClass;
 		}
 		return null;
@@ -230,6 +230,22 @@ public class GraphDatabase
 		return output.toString();
 	}
 
+	public ArrayList<String> getParentsTraversal(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser childTraverser = td.traverse( node );
+		ArrayList<String> childCollection = new ArrayList<String>();;
+		for ( Path child : childTraverser )
+		{
+			if(child.endNode()!=null)
+				childCollection.add((String) child.endNode().getProperty("id"));
+		}
+		return childCollection;
+	}
+	
 	@Deprecated
 	public ArrayList<String> getClassChildrenNodes(Node node)
 	{

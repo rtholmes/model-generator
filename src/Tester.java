@@ -21,6 +21,7 @@ import org.neo4j.kernel.Traversal;
 
 
 
+
 public class Tester
 {
 	private static GraphDatabaseService graphDb;
@@ -97,22 +98,26 @@ public class Tester
 			allParentsNodeStringIndex = graphDb.index().forNodes("allParentsString");
 			allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
 			
-			/*newParentsIndex = graphDb.index().forNodes("parentNodes");
-			System.out.println(newParentsIndex.query("childId", "*").size());
+			newParentsIndex = graphDb.index().forNodes("parentNodes");
+			//System.out.println(newParentsIndex.query("childId", "*").size());
 
-			Node tempNode = classIndex.get("id", "java.awt.List$AccessibleAWTList$AccessibleAWTListChild").getSingle();
-			System.out.println(tempNode.getProperty("exactName"));
-			ArrayList<Node> methods2 = getParents(tempNode, new HashMap<String, ArrayList<Node>>()); 
+			/*IndexHits<Node> nodes = shortClassIndex.get("short_name", "HttpClient");
+			for(Node node : nodes)
+			{
+				System.out.println(node.getProperty("id"));
+			}*/
+			Node tempNode = classIndex.get("id", "org.apache.http.impl.client.DefaultHttpClient").getSingle();
+			ArrayList<Node> methods2 = getParentsTraversal(tempNode, new HashMap<String, ArrayList<Node>>()); 
 			for(Node method: methods2)
 			{
 				System.out.println((String)method.getProperty("id") + " : " + method.getId());
-			}*/
+			}
 			
-			IndexHits<Node> test = shortClassIndex.get("short_name", "TaggedComponent");
+			/*IndexHits<Node> test = shortClassIndex.get("short_name", "TaggedComponent");
 			for(Node n : test)
 			{
 				System.out.println(n.getProperty("id"));
-			}
+			}*/
 			registerShutdownHook();
 		}
 		catch(Exception e)
@@ -120,7 +125,21 @@ public class Tester
 			e.printStackTrace();
 		}
 	}
-	
+	public static ArrayList<Node> getParentsTraversal(Node node, HashMap<String, ArrayList<Node>> parentNodeCache)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser childTraverser = td.traverse( node );
+		ArrayList<Node> childCollection = new ArrayList<Node>();;
+		for ( Path child : childTraverser )
+		{
+			if(child.endNode()!=null)
+				childCollection.add(child.endNode());
+		}
+		return childCollection;
+	}
 	public static ArrayList<Node> getParentsOld(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		String childId = (String) node.getProperty("id");
