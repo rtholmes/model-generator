@@ -18,11 +18,16 @@ class MissingElements
 			String[] arr = line.split(";");
 			if(arr[0].equals("method"))
 			{
-				//setmethods.add(arr[2]+"."+arr[1]);
-				setmethods.add(arr[2]);
+				setmethods.add(arr[2]+"."+arr[1]);
+				//setmethods.add(arr[2]);
 			}
-			else if(arr[0].equals("class"))
-				setclasses.add(arr[1]);
+			else if(arr[0].equals("class") || arr[0].equals("interface"))
+			{
+				if(!setclasses.contains(arr[1]))
+					setclasses.add(arr[1]);
+				else
+					System.out.println(arr[1]);
+			}
 		}
 		
 		System.out.println(setclasses.size());

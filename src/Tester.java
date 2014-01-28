@@ -106,18 +106,22 @@ public class Tester
 			{
 				System.out.println(node.getProperty("id"));
 			}*/
-			Node tempNode = classIndex.get("id", "org.apache.http.impl.client.DefaultHttpClient").getSingle();
+			/*Node tempNode = classIndex.get("id", "org.apache.http.impl.client.DefaultHttpClient").getSingle();
 			ArrayList<Node> methods2 = getParentsTraversal(tempNode, new HashMap<String, ArrayList<Node>>()); 
 			for(Node method: methods2)
 			{
 				System.out.println((String)method.getProperty("id") + " : " + method.getId());
-			}
-			
-			/*IndexHits<Node> test = shortClassIndex.get("short_name", "TaggedComponent");
+			}*/
+			ArrayList<String> setclasses = new ArrayList<String>();
+			IndexHits<Node> test = shortMethodIndex.query("short_name", "*");
 			for(Node n : test)
 			{
-				System.out.println(n.getProperty("id"));
-			}*/
+				//System.out.println(n.getProperty("id"));
+				String name = (String) n.getProperty("id");
+				setclasses.add(name);
+				
+			}
+			System.out.println(setclasses.size());
 			registerShutdownHook();
 		}
 		catch(Exception e)
