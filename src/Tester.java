@@ -79,7 +79,7 @@ public class Tester
 		HAS_FIELD_TYPE
 	}
 
-	public static void main(String[] args) throws IOException
+	public static void main0(String[] args) throws IOException
 	{
 		try
 		{
@@ -124,11 +124,11 @@ public class Tester
 	}
 	
 	
-	public static void main0(String[] args) 
+	public static void main(String[] args) 
 	{
 		
 		
-		WebResource resource = Client.create().resource( "http://localhost:7474/db/data/index/node/short_classes/short_name/Log" );
+		WebResource resource = Client.create().resource( "http://gadget.cs:7474/db/data/index/node/short_classes/short_name/Log" );
 		ClientResponse response = resource.accept("application/json").get( ClientResponse.class );
 		
 		
