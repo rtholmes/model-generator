@@ -14,7 +14,13 @@ import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
+import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.server.WrappingNeoServerBootstrapper;
+
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 
 
 
@@ -37,7 +43,7 @@ public class Tester
 	public static Index<Node> allParentsNodeStringIndex;
 	public static Index<Node> allMethodsIndex;
 	private static Index<Node> newParentsIndex;
-	
+	private static WrappingNeoServerBootstrapper srv;
 	public static String getClassId(String id)
 	{
 		String _className = null;
@@ -85,50 +91,58 @@ public class Tester
 			{
 				System.out.println("Database Locked");
 			}
+			 srv = new WrappingNeoServerBootstrapper((GraphDatabaseAPI) graphDb);
+		     srv.start(); 
+		 
+			registerShutdownHook();
 			classIndex = graphDb.index().forNodes("classes");
 			methodIndex = graphDb.index().forNodes("methods");
 			fieldIndex = graphDb.index().forNodes("fields");
 
-
-
 			shortClassIndex = graphDb.index().forNodes("short_classes");
 			shortMethodIndex = graphDb.index().forNodes("short_methods");
 			shortFieldIndex = graphDb.index().forNodes("short_fields");
+			
 			parentIndex = graphDb.index().forNodes("parents");
 			allParentsNodeStringIndex = graphDb.index().forNodes("allParentsString");
 			allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
 			
 			newParentsIndex = graphDb.index().forNodes("parentNodes");
 			//System.out.println(newParentsIndex.query("childId", "*").size());
-
-			/*IndexHits<Node> nodes = shortClassIndex.get("short_name", "HttpClient");
+			
+			IndexHits<Node> nodes = shortClassIndex.get("short_name", "Log");
 			for(Node node : nodes)
 			{
 				System.out.println(node.getProperty("id"));
-			}*/
-			/*Node tempNode = classIndex.get("id", "org.apache.http.impl.client.DefaultHttpClient").getSingle();
-			ArrayList<Node> methods2 = getParentsTraversal(tempNode, new HashMap<String, ArrayList<Node>>()); 
-			for(Node method: methods2)
-			{
-				System.out.println((String)method.getProperty("id") + " : " + method.getId());
-			}*/
-			ArrayList<String> setclasses = new ArrayList<String>();
-			IndexHits<Node> test = shortMethodIndex.query("short_name", "*");
-			for(Node n : test)
-			{
-				//System.out.println(n.getProperty("id"));
-				String name = (String) n.getProperty("id");
-				setclasses.add(name);
-				
 			}
-			System.out.println(setclasses.size());
-			registerShutdownHook();
+			srv.stop();
 		}
 		catch(Exception e)
 		{
 			e.printStackTrace();
 		}
 	}
+	
+	
+	public static void main0(String[] args) 
+	{
+		
+		
+		WebResource resource = Client.create().resource( "http://localhost:7474/db/data/index/node/short_classes/short_name/Log" );
+		ClientResponse response = resource.accept("application/json").get( ClientResponse.class );
+		
+		
+		System.out.println( String.format(
+		        " status code [%d], returned data: "
+		                + System.getProperty( "line.separator" ) + "%s",
+		        response.getStatus(),
+		        response.getEntity( String.class ) ) );
+		response.close();
+		
+		
+		
+	}
+	
 	public static ArrayList<Node> getParentsTraversal(Node node, HashMap<String, ArrayList<Node>> parentNodeCache)
 	{
 		TraversalDescription td = Traversal.description()
@@ -144,6 +158,8 @@ public class Tester
 		}
 		return childCollection;
 	}
+	
+	
 	public static ArrayList<Node> getParentsOld(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		String childId = (String) node.getProperty("id");

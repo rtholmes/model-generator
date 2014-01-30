@@ -1,32 +1,41 @@
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.TreeSet;
+import java.util.Set;
 
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.traversal.Evaluators;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
+import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.Traversal;
-import org.neo4j.rest.graphdb.RestAPI;
-import org.neo4j.rest.graphdb.RestAPIFacade;
+import org.neo4j.index.impl.lucene.*;
+
 
 
 public class GraphServerAccess
 {
-	public Index<Node> classIndex ;
-	public Index<Node> methodIndex ;
+	private static GraphDatabaseService graphDb;
+	private static String DB_URI;
+
+	private String methodIndex ;
+	private String allClassIndex;
+	private String allMethodsIndex;
+	private String shortClassIndex ;
+	private String shortMethodIndex ;
+	private String newParentsIndex;
 	
-	public Index<Node> shortClassIndex ;
-	public Index<Node> shortMethodIndex ;
-	public Index<Node> parentIndex;
+	
+	public Logger logger = new Logger();
+
+	private ClusterEliminator cEliminator;
 	
 	private static enum RelTypes implements RelationshipType
 	{
@@ -43,25 +52,33 @@ public class GraphServerAccess
 		IS_FIELD_TYPE,
 		HAS_FIELD_TYPE
 	}
-	
-	public GraphServerAccess() 
+
+	public GraphServerAccess(String input_oracle) throws StoreLockException, IOException
 	{
-		RestAPI restAPI = new RestAPIFacade("http://localhost:7474/db/data");
+		DB_URI = "http://localhost:7474/";
+		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_URI);
 		
-		classIndex = restAPI.getIndex("classes");
-		methodIndex = restAPI.getIndex("methods");
-		shortClassIndex = restAPI.getIndex("short_classes");
-		shortMethodIndex = restAPI.getIndex("short_methods");
-		parentIndex = restAPI.getIndex("parents");
+		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
+		
+		logger.disableAccessTimes();
+		logger.disableCacheHit();
+		
+		allClassIndex = "http://localhost:7474/db/data/index/node/classes/id/";
+		methodIndex = "http://localhost:7474/db/data/index/node/methods/id";
+		shortClassIndex = "http://localhost:7474/db/data/index/node/short_classes/short_name/";
+		shortMethodIndex = "http://localhost:7474/db/data/index/node/short_methods/short_name/";
+		allMethodsIndex = "http://localhost:7474/db/data/index/node/allMethodsIndex/classId/";
+		
+		newParentsIndex = "http://localhost:7474/db/data/index/node/parentNodes/childId/";
 		
 	}
-	
-	public static String getCurrentMethodName()
+
+	private String getCurrentMethodName()
 	{
-	     StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
-	     return stackTraceElements[1].toString();
+		StackTraceElement stackTraceElements[] = (new Throwable()).getStackTrace();
+		return stackTraceElements[1].toString();
 	}
-	
+
 	public ArrayList<Node> getCandidateClassNodes(String className, HashMap<String, ArrayList<Node>> candidateNodesCache) 
 	{
 		long start = System.nanoTime();
@@ -69,7 +86,7 @@ public class GraphServerAccess
 		if(candidateNodesCache.containsKey(className))
 		{
 			candidateClassCollection = candidateNodesCache.get(className);
-			//System.out.println("cache hit class!");
+			logger.printIfCacheHit("cache hit class!");
 		}
 		else
 		{
@@ -84,10 +101,10 @@ public class GraphServerAccess
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + className + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), className, end, start);
 		return candidateClassCollection;
 	}
-	
+
 	public ArrayList<Node> getCandidateMethodNodes(String methodName, HashMap<String, ArrayList<Node>> candidateMethodNodesCache) 
 	{
 		long start = System.nanoTime(); 
@@ -95,7 +112,7 @@ public class GraphServerAccess
 		if(candidateMethodNodesCache.containsKey(methodName))
 		{
 			candidateMethodNodes = candidateMethodNodesCache.get(methodName);
-			//System.out.println("cache hit method!");
+			logger.printIfCacheHit("cache hit method!");
 		}
 		else
 		{
@@ -110,64 +127,115 @@ public class GraphServerAccess
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + methodName + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
 		return candidateMethodNodes;
 	}
-	
-	
-	public boolean checkIfParentNode(Node parentNode, String childId)
+
+	public Node returnRightNodeIfCluster(Set<Node> set)
 	{
-		
-		/*Collection<Node> candidateChildren = new HashSet<Node>();
-		if(childId.contains(".")==false)
+		if(set.isEmpty())
+			return null;
+		if(cEliminator.checkIfCluster(set))
 		{
-			candidateChildren.addAll(getCandidateClassNodes(childId));
+			Node rightClass = cEliminator.findRightClass(set);
+			return rightClass;
 		}
 		else
 		{
-			Node candidate = classIndex.get("id", childId).getSingle();
-			candidateChildren.add(candidate);
+			//check if set has the originalClass from the hashmap. Maybe that is the right ans and the cluster set
+			//I created has some missing entities.
+			//Node rightClass = cEliminator.findRightClass(set);
+			//return rightClass;
 		}
-		for(Node child : candidateChildren)
+		return null;
+	}
+
+	public boolean checkIfParentNode(Node parentNode, String childId, HashMap<String, ArrayList<Node>> parentNodeCache)
+	{
+		long start = System.nanoTime();
+		
+		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
 		{
-			TraversalDescription td = Traversal.description()
-					.breadthFirst()
-					.relationships( RelTypes.PARENT, Direction.OUTGOING )
-					.evaluator( Evaluators.excludeStartPosition() );
-			Traverser traverser = td.traverse( child );
-			
-			for ( Path parentPath : traverser )
-			{
-					if(parentPath.endNode().getProperty("id").equals(parentNode.getProperty("id")))
-					{
-						//System.out.println("isParent");
-						return true;
-					}
-			}
-		}*/
-		//System.out.println("isNotParent");
-		long start = System.nanoTime(); 
-		IndexHits<Node> candidateNodes = parentIndex.get("parent", childId);
-		for(Node candidate : candidateNodes)
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return true;
+		}
+		String parentId = (String) parentNode.getProperty("id");
+		if(parentNodeCache.containsKey(childId))
 		{
-			if(candidate!=null)
+			logger.printIfCacheHit("parent list found in cache");
+			ArrayList<Node>parents = parentNodeCache.get(childId);
+			for(Node parent : parents)
 			{
-				if(candidate.equals(parentNode))
-					return true;
-				else
+				if(((String)parent.getProperty("id")).equals(parentId))
 				{
-					Collection<Node> parents = getParents(candidate);
-					for(Node pnode : parents)
-						if(candidate.equals(pnode))
-							return true;
+					long end = System.nanoTime();
+					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+					return true;
 				}
 			}
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return false;
 		}
-		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + parentNode.getProperty("id") + " | " + childId + " : " + String.valueOf((double)(end-start)/(1000000000)));
-		return false;
+		else
+		{
+			boolean ans = false;
+			IndexHits<Node> candidateNodes = newParentsIndex.get("childId", childId);
+			ArrayList<Node> parentList = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				parentList.add(candidate);
+				if(((String)candidate.getProperty("id")).equals(parentId))
+				{
+					ans = true;
+				}
+			}
+			//Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
+			//parentList.add(object);
+			parentNodeCache.put(childId, parentList);
+			long end = System.nanoTime();
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			return ans;
+		}
+	}
+
+
+	private static String escapeForLucene(String input)
+	{
+		StringBuilder output = new StringBuilder();
+		for(int i=0; i<input.length(); i++)
+		{
+			char x = input.charAt(i);
+			if(x=='[' || x==']' || x=='+' || x=='^' || x=='"' || x=='?')
+			{
+				output.append("\\"+x);
+			}
+			else
+			{
+				output.append(x);
+			}
+		}
+		return output.toString();
+	}
+
+	public ArrayList<String> getParentsTraversal(Node node)
+	{
+		TraversalDescription td = Traversal.description()
+				.breadthFirst()
+				.relationships( RelTypes.PARENT, Direction.OUTGOING )
+				.evaluator( Evaluators.excludeStartPosition() );
+		Traverser childTraverser = td.traverse( node );
+		ArrayList<String> childCollection = new ArrayList<String>();;
+		for ( Path child : childTraverser )
+		{
+			if(child.endNode()!=null)
+				childCollection.add((String) child.endNode().getProperty("id"));
+		}
+		return childCollection;
 	}
 	
+	@Deprecated
 	public ArrayList<String> getClassChildrenNodes(Node node)
 	{
 		TraversalDescription td = Traversal.description()
@@ -178,66 +246,109 @@ public class GraphServerAccess
 		ArrayList<String> childCollection = new ArrayList<String>();;
 		for ( Path child : childTraverser )
 		{
-				if(child.endNode()!=null)
-					childCollection.add((String) child.endNode().getProperty("id"));
+			if(child.endNode()!=null)
+				childCollection.add((String) child.endNode().getProperty("id"));
 		}
 		return childCollection;
 	}
-	
-	public static ArrayList<Node> getMethodNodes(Node node, HashMap<Node, ArrayList<Node>> methodNodesInClassNode)
+
+	public ArrayList<Node> getMethodNodes(Node node, HashMap<String, ArrayList<Node>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
 		ArrayList<Node> methodsCollection = null;
+		String className = (String) node.getProperty("id");
 		if(methodNodesInClassNode.containsKey(node))
 		{
-			methodsCollection = methodNodesInClassNode.get(node);
-			System.out.println("Cache hit methods in class");
+			methodsCollection = methodNodesInClassNode.get(className);
+			logger.printIfCacheHit("Cache hit methods in class");
 		}
 		else
 		{
-			TraversalDescription td = Traversal.description()
-					.breadthFirst()
-					.relationships( RelTypes.HAS_METHOD, Direction.OUTGOING )
-					.evaluator( Evaluators.excludeStartPosition() );
-			Traverser methodTraverser = td.traverse( node );
-			methodsCollection = new ArrayList<Node>();;
-			for ( Path methods : methodTraverser )
+			IndexHits<Node> methods = allMethodsIndex.get("classId", className);
+			methodsCollection = new ArrayList<Node>();
+			for(Node method : methods)
 			{
-				if(methods.length()==1)
+				if(method!=null)
 				{
-					if(methods.endNode()!=null)
-						methodsCollection.add(methods.endNode());
+					if(((String)method.getProperty("vis")).equals("PUBLIC")==true || ((String)method.getProperty("vis")).equals("NOTSET")==true)
+					{
+						methodsCollection.add(method);
+					}
 				}
-				else
-					break;
 			}
-			methodNodesInClassNode.put(node, methodsCollection);
+			methodNodesInClassNode.put(className, methodsCollection);
 		}
+
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return methodsCollection;
 	}
-	
+
+	@Deprecated
+	public IndexHits<Node> getMethodNodesInClassNodeOld (Node classNode, String methodExactName)
+	{
+		long start = System.nanoTime(); 
+		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		name = escapeForLucene(name);
+		IndexHits<Node> hits = methodIndex.query("id", name);
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName, end, start);
+		return hits;
+	}
+
+	public ArrayList<Node> getMethodNodesInClassNode (Node classNode, String methodExactName,  HashMap<String, ArrayList<Node>> methodNodesInClassNode)
+	{
+		long start = System.nanoTime(); 
+		ArrayList<Node> methodCollection = new ArrayList<Node>();
+		ArrayList<Node> completeMethodCollection = new ArrayList<Node>();
+		String className = (String) classNode.getProperty("id");
+		if(methodNodesInClassNode.containsKey(classNode))
+		{
+			ArrayList<Node> methods = methodNodesInClassNode.get(className);
+			for(Node method: methods)
+			{
+				if(((String)method.getProperty("exactName")).equals(methodExactName))
+				{
+					methodCollection.add(method);
+				}	
+			}
+			logger.printIfCacheHit("cache hit methods in class ++");
+		}
+		else
+		{
+			IndexHits<Node> methods = allMethodsIndex.get("classId", classNode.getProperty("id"));
+			for(Node method: methods)
+			{
+				if(method!=null)
+				{
+					if(((String)method.getProperty("vis")).equals("PUBLIC")==true || ((String)method.getProperty("vis")).equals("NOTSET")==true)
+					{
+						completeMethodCollection.add(method);
+						if(((String)method.getProperty("exactName")).equals(methodExactName))
+						{
+							methodCollection.add(method);
+						}
+					}
+				}
+			}
+			methodNodesInClassNode.put(className, completeMethodCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName, end, start);
+		return methodCollection;
+	}
+
 	public boolean checkIfClassHasMethod(Node classNode, String methodExactName)
 	{
 		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
+		name = escapeForLucene(name);
 		IndexHits<Node> hits = methodIndex.query("id", name);
 		if(hits.size()>0)
 			return true;
 		else
 			return false;
 	}
-	
-	public IndexHits<Node> getMethodNodesInClassNode (Node classNode, String methodExactName)
-	{
-		long start = System.nanoTime(); 
-		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
-		IndexHits<Node> hits = methodIndex.query("id", name);
-		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + classNode.getProperty("id")+"."+methodExactName +" : " + String.valueOf((double)(end-start)/(1000000000)));
-		return hits;
-	}
-	
+
 	public Node getMethodContainer(Node node, HashMap<Node, Node> methodContainerCache)
 	{
 		long start = System.nanoTime(); 
@@ -245,7 +356,7 @@ public class GraphServerAccess
 		if(methodContainerCache.containsKey(node))
 		{
 			container = methodContainerCache.get(node);
-			//System.out.println("Cache hit method container");
+			logger.printIfCacheHit("Cache hit method container");
 		}
 		else
 		{
@@ -269,12 +380,12 @@ public class GraphServerAccess
 					break;
 			}
 		}
-		
+
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id")+ " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return container;
 	}
-	
+
 	public Node getMethodReturn(Node node, HashMap<Node, Node> methodReturnCache)
 	{
 		long start = System.nanoTime(); 
@@ -282,7 +393,7 @@ public class GraphServerAccess
 		if(methodReturnCache.containsKey(node))
 		{
 			returnNode = methodReturnCache.get(node);
-			//System.out.println("Cache hit method return");
+			logger.printIfCacheHit("Cache hit method return");
 		}
 		else
 		{
@@ -303,53 +414,57 @@ public class GraphServerAccess
 			}
 		}
 		long end = System.nanoTime();
-		//if(returnNode!=null)
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + returnNode.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		if(returnNode!=null)
+			logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString() + " - " + returnNode.getProperty("id").toString(), end, start);
 		return returnNode;
 	}
-	
-	public TreeSet<Node> getMethodParams(Node node, HashMap<Node, TreeSet<Node>> methodParameterCache) 
+
+	public ArrayList<Node> getMethodParams(Node node, HashMap<Node, ArrayList<Node>> methodParameterCache) 
 	{
 		long start = System.nanoTime();
-		
-		TreeSet<Node> paramNodesCollection = new TreeSet<Node>(new Comparator<Node>(){
-			public int compare(Node a, Node b)
-			{
-				return (Integer)a.getProperty("paramIndex")-(Integer)b.getProperty("paramIndex");
-			}
-			
-		});
-		
+
+		ArrayList<Node> paramNodesCollection = null;
+
 		if(methodParameterCache.containsKey(node))
 		{
 			paramNodesCollection = methodParameterCache.get(node);
-			//System.out.println("Cache hit method parameters");
+			logger.printIfCacheHit("Cache hit method parameters");
 		}
 		else
 		{
-			TraversalDescription td = Traversal.description()
-					.breadthFirst()
-					.relationships( RelTypes.PARAMETER, Direction.OUTGOING )
-					.evaluator( Evaluators.excludeStartPosition() );
-			Traverser traverser = td.traverse( node );
+			paramNodesCollection = new ArrayList<Node>();
 			
-			for ( Path paramNode : traverser )
-			{
-				if(paramNode.length()==1)
-				{
-					paramNodesCollection.add(paramNode.endNode());
+			String mname = (String) node.getProperty("id");
+			mname = mname.substring(0, mname.length()-1);
+			if(mname.lastIndexOf("(") != mname.length()-1)
+			{	
+				String[] array = mname.split("\\(");
+				String paramList = array[array.length-1];
+				//System.out.println(paramList + "--");
+				if(!paramList.trim().equals(null))
+				{	
+					String[] params = paramList.split(",");
+					for(String param : params)
+					{
+						Node parameter = allClassIndex.get("id", param.trim()).getSingle();
+						paramNodesCollection.add(parameter);
+					}
 				}
-				else
-					break;
 			}
 			methodParameterCache.put(node, paramNodesCollection);
 		}
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return paramNodesCollection;
 	}
-	
-	
+
+	void shutdown()
+	{
+		graphDb.shutdown();
+	}
+
+
+	@Deprecated
 	public Node getUltimateParent(final Node node )
 	{
 		TraversalDescription td = Traversal.description()
@@ -367,26 +482,59 @@ public class GraphServerAccess
 		}
 		return answer;
 	}
-	
-	public ArrayList<Node> getParents(final Node node )
+
+	public ArrayList<Node> getParentsOld(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
-		IndexHits<Node> candidateNodes = parentIndex.get("parent", node.getProperty("id"));
-		ArrayList<Node> classElementCollection = new ArrayList<Node>();
-		for(Node candidate : candidateNodes)
+		String childId = (String) node.getProperty("id");
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
 		{
-			if(candidate!=null)
-			{
-				if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-				{
-					classElementCollection.add(candidate);
-					classElementCollection.addAll(getParents(candidate));
-				}
-			}
+			classElementCollection = parentNodeCache.get(childId);
 		}
+		else
+		{
+			IndexHits<Node> candidateNodes = allParentsNodeIndex.get("parent", childId);
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
+			classElementCollection.add(object);
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		
 		long end = System.nanoTime();
-		System.out.println(getCurrentMethodName() + " - " + node.getProperty("id") + " : " + String.valueOf((double)(end-start)/(1000000000)));
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
 	}
+	
+	public ArrayList<Node> getParents(final Node node, HashMap<String, ArrayList<Node>> parentNodeCache )
+	{
+		long start = System.nanoTime(); 
+		String childId = (String) node.getProperty("id");
+		ArrayList<Node> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
+		{
+			classElementCollection = parentNodeCache.get(childId);
+		}
+		else
+		{
+			IndexHits<Node> candidateNodes = newParentsIndex.get("childId", childId); 
+			classElementCollection = new ArrayList<Node>();
+			for(Node candidate : candidateNodes)
+			{
+				classElementCollection.add(candidate);
+			}
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
+		return classElementCollection;
+	}
+	
+	
+	
 
 }

@@ -1,10 +1,7 @@
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -19,6 +16,7 @@ import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.kernel.StoreLockException;
 import org.neo4j.kernel.Traversal;
+import org.neo4j.index.impl.lucene.*;
 
 
 
@@ -75,13 +73,13 @@ public class GraphDatabase
 		
 		newParentsIndex = graphDb.index().forNodes("parentNodes");
 		
-		/*//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
+			//((LuceneIndex<Node>) classIndex).setCacheCapacity( "classes", 100000000 );
 			//((LuceneIndex<Node>) methodIndex).setCacheCapacity( "methods", 100000000 );
 			//((LuceneIndex<Node>) fieldIndex).setCacheCapacity( "fields", 1000000 );
 			((LuceneIndex<Node>) shortClassIndex).setCacheCapacity( "short_fields", 500000000 );
 			((LuceneIndex<Node>) shortMethodIndex).setCacheCapacity( "short_methods", 500000000 );
 			//((LuceneIndex<Node>) shortFieldIndex).setCacheCapacity( "short_classes", 1000000 );
-			((LuceneIndex<Node>) parentIndex).setCacheCapacity( "parents", 500000000);*/
+			((LuceneIndex<Node>) newParentsIndex).setCacheCapacity( "parents", 500000000);
 	}
 
 	private String getCurrentMethodName()
