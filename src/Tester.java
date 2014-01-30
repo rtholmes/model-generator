@@ -128,15 +128,11 @@ public class Tester
 	{
 		
 		
-		WebResource resource = Client.create().resource( "http://gadget.cs:7474/db/data/index/node/short_classes/short_name/Log" );
+		WebResource resource = Client.create().resource( "http://gadget.cs:7474/db/data/index/node/short_classes/short_name/Integer" );
 		ClientResponse response = resource.accept("application/json").get( ClientResponse.class );
 		
 		
-		System.out.println( String.format(
-		        " status code [%d], returned data: "
-		                + System.getProperty( "line.separator" ) + "%s",
-		        response.getStatus(),
-		        response.getEntity( String.class ) ) );
+		System.out.println(response.getEntity( String.class ) );
 		response.close();
 		
 		
