@@ -110,7 +110,7 @@ public class Tester
 			newParentsIndex = graphDb.index().forNodes("parentNodes");
 			//System.out.println(newParentsIndex.query("childId", "*").size());
 			
-			IndexHits<Node> nodes = shortClassIndex.get("short_name", "Log");
+			IndexHits<Node> nodes = shortClassIndex.get("short_name", "String");
 			for(Node node : nodes)
 			{
 				System.out.println(node.getProperty("id"));

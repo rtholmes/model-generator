@@ -90,6 +90,7 @@ public class GraphServerAccess
 		}
 		else
 		{
+			//sdf
 			IndexHits<Node> candidateNodes = shortClassIndex.get("short_name", className.replace(".", "$"));
 			candidateClassCollection = new ArrayList<Node>();
 			for(Node candidate : candidateNodes)
