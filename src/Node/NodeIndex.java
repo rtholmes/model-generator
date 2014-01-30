@@ -27,10 +27,12 @@ public class NodeIndex
 	{
 		
 		WebResource resource = null;
-		try {
+		try 
+		{
 			resource = Client.create().resource(URI + URLEncoder.encode(elementName, "UTF-8"));
-		} catch (UnsupportedEncodingException e1) {
-			// TODO Auto-generated catch block
+		} 
+		catch (UnsupportedEncodingException e1) 
+		{
 			e1.printStackTrace();
 		}
 		ClientResponse response = resource.accept("application/json").get( ClientResponse.class );

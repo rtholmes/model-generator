@@ -54,8 +54,8 @@ public class GraphServerAccess
 		
 		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 		
-		logger.disableAccessTimes();
-		logger.disableCacheHit();
+		//logger.disableAccessTimes();
+		//logger.disableCacheHit();
 		
 		allClassIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
 		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id");
@@ -279,18 +279,6 @@ public class GraphServerAccess
 		return methodsCollection;
 	}
 
-	@Deprecated
-	public IndexHits<NodeJSON> getMethodNodesInClassNodeOld (NodeJSON classNode, String methodExactName)
-	{
-		long start = System.nanoTime(); 
-		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
-		name = escapeForLucene(name);
-		IndexHits<NodeJSON> hits = methodIndex.query("id", name);
-		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName, end, start);
-		return hits;
-	}
-
 	public ArrayList<NodeJSON> getMethodNodesInClassNode (NodeJSON classNode, String methodExactName,  HashMap<String, IndexHits<NodeJSON>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
@@ -346,7 +334,7 @@ public class GraphServerAccess
 
 
 
-	public ArrayList<NodeJSON> getMethodParams(NodeJSON node, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache) 
+	public ArrayList<NodeJSON> getMethodParams(NodeJSON node, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache, HashMap<String, NodeJSON> candidateClassNodesCache) 
 	{
 		long start = System.nanoTime();
 
@@ -373,7 +361,14 @@ public class GraphServerAccess
 					String[] params = paramList.split(",");
 					for(String param : params)
 					{
-						NodeJSON parameter = allClassIndex.get(param.trim()).getSingle();
+						NodeJSON parameter = null;
+						if(candidateClassNodesCache.containsKey(param))
+							parameter = candidateClassNodesCache.get(param);
+						else
+						{
+							parameter = allClassIndex.get(param.trim()).getSingle();
+							candidateClassNodesCache.put(param, parameter);
+						}
 						paramNodesCollection.add(parameter);
 					}
 				}
