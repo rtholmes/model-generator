@@ -467,7 +467,7 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=node({startName})MATCH (root)-[:IS_METHOD]->(container)RETURN containerLIMIT 1";
+			String cypher = "START root=node({startName}) MATCH (root)-[:IS_METHOD]->(container) RETURN container LIMIT 1";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("startName", node.getNodeNumber());
 			JSONObject json = new JSONObject();
@@ -484,7 +484,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			System.out.println(jsonArray);
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			JSONArray temptempArray = (JSONArray)tempArray.get(0);
 			containerNode = new NodeJSON(temptempArray.getJSONObject(0));
