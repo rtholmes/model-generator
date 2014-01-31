@@ -22,6 +22,22 @@ public class NodeJSON
 	{
 		
 	}
+	
+	public Integer getNodeNumber()
+	{
+		if(data.has("indexed"))
+		{
+			String[] temp = ((String) data.get("indexed")).split("/");
+			String nodeNumber = temp[temp.length-1];
+			return Integer.valueOf(nodeNumber);
+		}
+		else
+		{
+			String[] temp = ((String) data.get("self")).split("/");
+			String nodeNumber = temp[temp.length-1];
+			return Integer.valueOf(nodeNumber);
+		}
+	}
 
 	public String getProperty(String prop) 
 	{

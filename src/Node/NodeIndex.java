@@ -1,11 +1,8 @@
 package Node;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.text.ParseException;
-import java.util.ArrayList;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
