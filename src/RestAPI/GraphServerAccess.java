@@ -98,6 +98,8 @@ public class GraphServerAccess
 		return stackTraceElements[1].toString();
 	}
 
+	
+	/*CYPHER*/
 	public IndexHits<NodeJSON> getCandidateClassNodes(String className, HashMap<String, IndexHits<NodeJSON>> candidateNodesCache) 
 	{
 		long start = System.nanoTime();
@@ -109,20 +111,108 @@ public class GraphServerAccess
 		}
 		else
 		{
-			IndexHits<NodeJSON> candidateNodes = shortClassIndex.get(className.replace(".", "$"));
 			candidateClassCollection = new IndexHits<NodeJSON>();
-			for(NodeJSON candidate : candidateNodes)
+			String cypher = "START root=node:short_classes(short_name={startName}) WHERE root.vis = {public} OR root.vis = {notset} RETURN root";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("startName", className.replace(".", "$"));
+			tempJSON.put("public", "PUBLIC");
+			tempJSON.put("notset", "NOTSET");
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			//System.out.println(className + "\n" + jsonString);
+			JSONObject jsonArray = null;
+			try 
 			{
-				if(candidate!=null)
-					if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
-						candidateClassCollection.add(candidate);
+				jsonArray = new JSONObject(jsonString);
 			}
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			//System.out.println(jsonArray);
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			if(tempArray.length()>0)
+			{
+				for(int i=0; i<tempArray.length(); i++)
+				{
+					JSONArray obj = tempArray.getJSONArray(i);
+					JSONObject toInsert = obj.getJSONObject(0);
+					NodeJSON nodejson = new NodeJSON(toInsert);
+					candidateClassCollection.add(nodejson);
+				}
+			}
+			else
+			{
+				//System.out.println("$$ "+tempArray);
+			}
+			System.out.println(className + " : " +candidateClassCollection.size());
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), className, end, start);
 		return candidateClassCollection;
 	}
+
+	/*CYPHER*/
+	/*public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
+	{
+		long start = System.nanoTime(); 
+		IndexHits<NodeJSON> candidateMethodNodes = null;
+		if(candidateMethodNodesCache.containsKey(methodName))
+		{
+			candidateMethodNodes = candidateMethodNodesCache.get(methodName);
+			logger.printIfCacheHit("cache hit method!");
+		}
+		else
+		{
+
+			candidateMethodNodes = new IndexHits<NodeJSON>();
+			String cypher = "START root=node:short_methods(short_name={startName}) WHERE root.vis = {public} OR root.vis = {notset} RETURN root";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("startName", methodName.replace(".", "$"));
+			tempJSON.put("public", "PUBLIC");
+			tempJSON.put("notset", "NOTSET");
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			JSONObject jsonArray = null;
+			try 
+			{
+				jsonArray = new JSONObject(jsonString);
+			}
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			System.out.println(jsonArray);
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			if(tempArray.length()>0)
+			{
+				for(int i=0; i<tempArray.length(); i++)
+				{
+					JSONArray obj = tempArray.getJSONArray(i);
+					JSONObject toInsert = obj.getJSONObject(0);
+					NodeJSON nodejson = new NodeJSON(toInsert);
+					candidateMethodNodes.add(nodejson);
+				}
+			}
+			else
+			{
+				//System.out.println("$$ "+tempArray);
+			}
+			System.out.println(methodName + " : " +candidateMethodNodes.size());
+			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
+		
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
+		return candidateMethodNodes;
+	}*/
 
 	public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
 	{
@@ -135,6 +225,7 @@ public class GraphServerAccess
 		}
 		else
 		{
+			
 			IndexHits<NodeJSON> candidateNodes = shortMethodIndex.get(methodName);
 			candidateMethodNodes = new IndexHits<NodeJSON>();
 			for(NodeJSON candidate : candidateNodes)
@@ -150,6 +241,7 @@ public class GraphServerAccess
 		return candidateMethodNodes;
 	}
 
+	
 	public NodeJSON returnRightNodeIfCluster(Set<NodeJSON> set)
 	{
 		if(set.isEmpty())
@@ -314,7 +406,7 @@ public class GraphServerAccess
 				JSONArray temptempArray = (JSONArray)tempArray.get(0);
 				for(int i=0; i<temptempArray.length(); i++)
 				{
-					JSONObject obj = temptempArray.getJSONObject(0);
+					JSONObject obj = temptempArray.getJSONObject(i);
 					NodeJSON nodejson = new NodeJSON(obj);
 					methodCollection.add(nodejson);
 				}
@@ -323,6 +415,7 @@ public class GraphServerAccess
 			{
 				//System.out.println("$$ "+tempArray);
 			}
+			System.out.println(className + " . " + methodExactName + " : " + methodCollection.size());
 			methodNodesInClassNode.put(className, methodCollection);
 		}
 		long end = System.nanoTime();
@@ -383,7 +476,7 @@ public class GraphServerAccess
 				JSONArray temptempArray = (JSONArray)tempArray.get(0);
 				for(int i=0; i<temptempArray.length(); i++)
 				{
-					JSONObject obj = temptempArray.getJSONObject(0);
+					JSONObject obj = temptempArray.getJSONObject(i);
 					NodeJSON nodejson = new NodeJSON(obj);
 					paramNodesCollection.add(nodejson);
 				}
@@ -623,4 +716,31 @@ public class GraphServerAccess
 		return paramNodesCollection;
 	}*/
 	
+	
+	/*public IndexHits<NodeJSON> getCandidateClassNodes(String className, HashMap<String, IndexHits<NodeJSON>> candidateNodesCache) 
+	{
+		long start = System.nanoTime();
+		IndexHits<NodeJSON> candidateClassCollection = null;
+		if(candidateNodesCache.containsKey(className))
+		{
+			candidateClassCollection = candidateNodesCache.get(className);
+			logger.printIfCacheHit("cache hit class!");
+		}
+		else
+		{
+			IndexHits<NodeJSON> candidateNodes = shortClassIndex.get(className.replace(".", "$"));
+			candidateClassCollection = new IndexHits<NodeJSON>();
+			for(NodeJSON candidate : candidateNodes)
+			{
+				if(candidate!=null)
+					if(((String)candidate.getProperty("vis")).equals("PUBLIC")==true || ((String)candidate.getProperty("vis")).equals("NOTSET")==true)
+						candidateClassCollection.add(candidate);
+			}
+			System.out.println(className + " : " +candidateClassCollection.size());
+			candidateNodesCache.put(className, candidateClassCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), className, end, start);
+		return candidateClassCollection;
+	}*/
 }
