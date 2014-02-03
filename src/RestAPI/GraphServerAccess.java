@@ -168,7 +168,6 @@ public class GraphServerAccess
 		}
 		else
 		{
-
 			candidateMethodNodes = new IndexHits<NodeJSON>();
 			String cypher = "START root=node:short_methods(short_name={startName}) WHERE root.vis = {public} OR root.vis = {notset} RETURN root";
 			JSONObject tempJSON = new JSONObject();
@@ -189,7 +188,7 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			System.out.println(jsonArray);
+			//System.out.println(jsonArray);
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			if(tempArray.length()>0)
 			{
@@ -389,7 +388,7 @@ public class GraphServerAccess
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
-
+			System.out.println(classNode.getNodeNumber() + " : " + methodExactName);
 			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
 			JSONObject jsonArray = null;
 			try 
