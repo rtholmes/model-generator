@@ -26,9 +26,9 @@ public class GraphServerAccess
 	private static String DB_URI;
 
 	private NodeIndex methodIndex ;
-	private NodeIndex allClassIndex;
+	//private NodeIndex allClassIndex;
 	private NodeIndex allMethodsIndex;
-	private NodeIndex shortClassIndex ;
+	//private NodeIndex shortClassIndex ;
 	private NodeIndex shortMethodIndex ;
 	private NodeIndex newParentsIndex;
 	
@@ -48,9 +48,9 @@ public class GraphServerAccess
 		//logger.disableAccessTimes();
 		//logger.disableCacheHit();
 		
-		allClassIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
+		//allClassIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
 		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id");
-		shortClassIndex = new NodeIndex(DB_URI + "/index/node/short_classes/short_name/");
+		//shortClassIndex = new NodeIndex(DB_URI + "/index/node/short_classes/short_name/");
 		shortMethodIndex = new NodeIndex(DB_URI + "/index/node/short_methods/short_name/");
 		allMethodsIndex = new NodeIndex(DB_URI + "/index/node/allMethodsIndex/classId/");
 		
@@ -157,7 +157,7 @@ public class GraphServerAccess
 	}
 
 	/*CYPHER*/
-	/*public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
+	public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
 	{
 		long start = System.nanoTime(); 
 		IndexHits<NodeJSON> candidateMethodNodes = null;
@@ -212,9 +212,9 @@ public class GraphServerAccess
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
 		return candidateMethodNodes;
-	}*/
+	}
 
-	public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
+	/*public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
 	{
 		long start = System.nanoTime(); 
 		IndexHits<NodeJSON> candidateMethodNodes = null;
@@ -240,7 +240,7 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
 		return candidateMethodNodes;
 	}
-
+*/
 	
 	public NodeJSON returnRightNodeIfCluster(Set<NodeJSON> set)
 	{
