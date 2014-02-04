@@ -122,7 +122,6 @@ public class GraphServerAccess
 			json.put("params", tempJSON);
 
 			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
-			//System.out.println(className + "\n" + jsonString);
 			JSONObject jsonArray = null;
 			try 
 			{
@@ -132,7 +131,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			//System.out.println(jsonArray);
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			if(tempArray.length()>0)
 			{
@@ -143,10 +141,6 @@ public class GraphServerAccess
 					NodeJSON nodejson = new NodeJSON(toInsert);
 					candidateClassCollection.add(nodejson);
 				}
-			}
-			else
-			{
-				//System.out.println("$$ "+tempArray);
 			}
 			System.out.println(className + " : " +candidateClassCollection.size());
 			candidateNodesCache.put(className, candidateClassCollection);
@@ -199,10 +193,6 @@ public class GraphServerAccess
 					NodeJSON nodejson = new NodeJSON(toInsert);
 					candidateMethodNodes.add(nodejson);
 				}
-			}
-			else
-			{
-				//System.out.println("$$ "+tempArray);
 			}
 			System.out.println(methodName + " : " +candidateMethodNodes.size());
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
@@ -324,10 +314,12 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START class=node:short_classes(short_name = {classexactname}), method = node:short_methods(short_name = {methodexactname}) MATCH class-[:HAS_METHOD]->method, method-[:RETURN_TYPE]->returnNode RETURN class, method, returnNode";
+			String cypher = "START class=node:short_classes(short_name = {classexactname}), method = node:short_methods(short_name = {methodexactname}) MATCH class-[:HAS_METHOD]->method, method-[:RETURN_TYPE]->returnNode WHERE (class.vis = {notset} or class.vis = {public}) and (method.vis = {notset} or method.vis = {public}) RETURN class, method, returnNode";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("classexactname", classExactName);
 			tempJSON.put("methodexactname", methodExactName);
+			tempJSON.put("notset", "NOTSET");
+			tempJSON.put("public", "PUBLIC");
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
@@ -341,7 +333,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			//System.out.println(jsonArray);
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			if(tempArray.length()>0)
 			{
@@ -357,6 +348,8 @@ public class GraphServerAccess
 					classCollection.add(classNodejson);
 					methodCollection.add(methodNodejson);
 					returnCollection.add(returnNodejson);
+					methodReturnCache.put(methodNodejson, returnNodejson);
+					methodContainerCache.put(methodNodejson, classNodejson);
 				}
 				classMethodCollection.add(classCollection);
 				classMethodCollection.add(methodCollection);
@@ -364,11 +357,11 @@ public class GraphServerAccess
 			}
 			System.out.println(classExactName + " . " + methodExactName + " : " + methodCollection.size());
 			shortClassShortMethodCache.put(classExactName+'.'+methodExactName, classMethodCollection);
+			
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), classExactName+'.'+methodExactName, end, start);
 		return classMethodCollection;
-	
 	}
 
 	private static String escapeForLucene(String input)
@@ -389,6 +382,7 @@ public class GraphServerAccess
 		return output.toString();
 	}
 
+	
 	public ArrayList<NodeJSON> getMethodNodes(NodeJSON node, HashMap<String, ArrayList<NodeJSON>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
