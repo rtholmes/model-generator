@@ -310,6 +310,66 @@ public class GraphServerAccess
 		}
 	}
 
+	public ArrayList<ArrayList<NodeJSON>> getMethodNodeWithShortClass(String methodExactName, String classExactName, HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache, HashMap<NodeJSON, NodeJSON> methodReturnCache, HashMap<NodeJSON, NodeJSON> methodContainerCache)
+	{
+		long start = System.nanoTime(); 
+		ArrayList<ArrayList<NodeJSON>> classMethodCollection = new ArrayList<ArrayList<NodeJSON>>();
+		ArrayList<NodeJSON> classCollection = new ArrayList<NodeJSON>();
+		ArrayList<NodeJSON> methodCollection = new ArrayList<NodeJSON>();
+		ArrayList<NodeJSON> returnCollection = new ArrayList<NodeJSON>();
+		if(shortClassShortMethodCache.containsKey(classExactName + '.' + methodExactName))
+		{
+			classMethodCollection = shortClassShortMethodCache.get(classExactName + '.' + methodExactName);
+			logger.printIfCacheHit("cache hit methods in class ++");
+		}
+		else
+		{
+			String cypher = "START class=node:short_classes(short_name = {classexactname}), method = node:short_methods(short_name = {methodexactname}) MATCH class-[:HAS_METHOD]->method, method-[:RETURN_TYPE]->returnNode RETURN class, method, returnNode";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("classexactname", classExactName);
+			tempJSON.put("methodexactname", methodExactName);
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			JSONObject jsonArray = null;
+			try 
+			{
+				jsonArray = new JSONObject(jsonString);
+			} 
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			//System.out.println(jsonArray);
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			if(tempArray.length()>0)
+			{
+				for(int i=0; i<tempArray.length(); i++)
+				{
+					JSONArray temptempArray = tempArray.getJSONArray(i);
+					JSONObject classObj = temptempArray.getJSONObject(0);
+					JSONObject methodObj = temptempArray.getJSONObject(1);
+					JSONObject returnObj = temptempArray.getJSONObject(2);
+					NodeJSON classNodejson = new NodeJSON(classObj);
+					NodeJSON methodNodejson = new NodeJSON(methodObj);
+					NodeJSON returnNodejson = new NodeJSON(returnObj);
+					classCollection.add(classNodejson);
+					methodCollection.add(methodNodejson);
+					returnCollection.add(returnNodejson);
+				}
+				classMethodCollection.add(classCollection);
+				classMethodCollection.add(methodCollection);
+				classMethodCollection.add(returnCollection);
+			}
+			System.out.println(classExactName + " . " + methodExactName + " : " + methodCollection.size());
+			shortClassShortMethodCache.put(classExactName+'.'+methodExactName, classMethodCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), classExactName+'.'+methodExactName, end, start);
+		return classMethodCollection;
+	
+	}
 
 	private static String escapeForLucene(String input)
 	{
