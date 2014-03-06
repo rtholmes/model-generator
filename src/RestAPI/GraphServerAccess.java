@@ -26,10 +26,7 @@ public class GraphServerAccess
 	private static String DB_URI;
 
 	private NodeIndex methodIndex ;
-	//private NodeIndex allClassIndex;
 	private NodeIndex allMethodsIndex;
-	//private NodeIndex shortClassIndex ;
-	private NodeIndex shortMethodIndex ;
 	private NodeIndex newParentsIndex;
 	
 	
@@ -48,10 +45,7 @@ public class GraphServerAccess
 		//logger.disableAccessTimes();
 		//logger.disableCacheHit();
 		
-		//allClassIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
 		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id");
-		//shortClassIndex = new NodeIndex(DB_URI + "/index/node/short_classes/short_name/");
-		shortMethodIndex = new NodeIndex(DB_URI + "/index/node/short_methods/short_name/");
 		allMethodsIndex = new NodeIndex(DB_URI + "/index/node/allMethodsIndex/classId/");
 		
 		newParentsIndex = new NodeIndex(DB_URI + "/index/node/parentNodes/childId/");
@@ -491,11 +485,11 @@ public class GraphServerAccess
 
 
 	/*Cypher*/
-	public ArrayList<NodeJSON> getMethodParams(NodeJSON node, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache, HashMap<String, NodeJSON> candidateClassNodesCache) 
+	public ArrayList<NodeJSON> getMethodParams(NodeJSON node, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache) 
 	{
 		long start = System.nanoTime();
 
-		ArrayList<NodeJSON> paramNodesCollection = null;
+		ArrayList<NodeJSON> paramNodesCollection = new ArrayList<NodeJSON>();
 
 		if(methodParameterCache.containsKey(node))
 		{
@@ -504,8 +498,25 @@ public class GraphServerAccess
 		}
 		else
 		{
-			
-			paramNodesCollection = new ArrayList<NodeJSON>();
+			///*
+			String methodId = node.getProperty("id");
+			String[] params = methodId.substring(methodId.indexOf("(")+1, methodId.indexOf(")")).split(",");
+			for(String param : params)
+			{
+				if(!param.equals(""))
+				{
+					String exactName = getExactName(param);
+					JSONObject data = new JSONObject();
+					data.put("id", param.trim());
+					data.put("exactName",exactName);
+					JSONObject temp = new JSONObject();
+					temp.put("data", data);
+					NodeJSON nodeParameter = new NodeJSON(temp); 
+					paramNodesCollection.add(nodeParameter);
+				}
+			}
+			/*
+			 paramNodesCollection = new ArrayList<NodeJSON>();
 			String cypher = "START root=node({startName})MATCH (root)-[:PARAMETER]->(param)RETURN param";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("startName", node.getNodeNumber());
@@ -539,14 +550,28 @@ public class GraphServerAccess
 				//System.out.println("$$ "+tempArray);
 			}
 			methodParameterCache.put(node, paramNodesCollection);
+			*/
 		}
 		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString() + " : " + paramNodesCollection.size(), end, start);
 		return paramNodesCollection;
 	}
 
+	public String getExactName(String _id) 
+	{
+		String name=_id;
+		int i;
+		for(i = 0;i<name.length();i++)
+		{
+			if(Character.isUpperCase(name.charAt(i)))
+			{
+				return _id.substring(i);
+			}
+		}
+		return _id;
+	}
 	
-	public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
+	/*public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
 		String childId = (String) node.getProperty("id");
@@ -562,6 +587,53 @@ public class GraphServerAccess
 			for(NodeJSON candidate : candidateNodes)
 			{
 				classElementCollection.add(candidate);
+			}
+			parentNodeCache.put(childId, classElementCollection);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
+		return classElementCollection;
+	}*/
+	
+	/*cypher*/
+	public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
+	{
+		long start = System.nanoTime(); 
+		String childId = (String) node.getProperty("id");
+		ArrayList<NodeJSON> classElementCollection = null;
+		if(parentNodeCache.containsKey(childId))
+		{
+			classElementCollection = parentNodeCache.get(childId);
+		}
+		else
+		{
+			String cypher = "START root=node:parentNodes(childId={childId}) RETURN root";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("childId", childId);
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+			classElementCollection = new ArrayList<NodeJSON>();
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			JSONObject jsonArray = null;
+			try 
+			{
+				jsonArray = new JSONObject(jsonString);
+			}
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			if(tempArray.length()>0)
+			{
+				for(int i=0; i<tempArray.length(); i++)
+				{
+					JSONArray obj = tempArray.getJSONArray(i);
+					JSONObject toInsert = obj.getJSONObject(0);
+					NodeJSON nodejson = new NodeJSON(toInsert);
+					classElementCollection.add(nodejson);
+				}
 			}
 			parentNodeCache.put(childId, classElementCollection);
 		}

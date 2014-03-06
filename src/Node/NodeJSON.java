@@ -10,12 +10,12 @@ public class NodeJSON
 	
 	public JSONObject getJSONObject()
 	{
-		return this.data;
+		return data;
 	}
 	
 	public NodeJSON(JSONObject obj) 
 	{
-		this.data = obj;
+		data = obj;
 	}
 	
 	public static void main(String[] args) 
