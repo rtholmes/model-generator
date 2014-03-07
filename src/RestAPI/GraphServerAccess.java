@@ -136,7 +136,6 @@ public class GraphServerAccess
 					candidateClassCollection.add(nodejson);
 				}
 			}
-			System.out.println(className + " : " +candidateClassCollection.size());
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
 		long end = System.nanoTime();
@@ -176,7 +175,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			//System.out.println(jsonArray);
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			if(tempArray.length()>0)
 			{
@@ -188,7 +186,6 @@ public class GraphServerAccess
 					candidateMethodNodes.add(nodejson);
 				}
 			}
-			System.out.println(methodName + " : " +candidateMethodNodes.size());
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
 		
 		}
@@ -349,7 +346,6 @@ public class GraphServerAccess
 				classMethodCollection.add(methodCollection);
 				classMethodCollection.add(returnCollection);
 			}
-			System.out.println(classExactName + " . " + methodExactName + " : " + methodCollection.size());
 			shortClassShortMethodCache.put(classExactName+'.'+methodExactName, classMethodCollection);
 			
 		}
@@ -436,7 +432,6 @@ public class GraphServerAccess
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
-			System.out.println(classNode.getNodeNumber() + " : " + methodExactName);
 			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
 			JSONObject jsonArray = null;
 			try 
@@ -462,7 +457,6 @@ public class GraphServerAccess
 			{
 				//System.out.println("$$ "+tempArray);
 			}
-			System.out.println(className + " . " + methodExactName + " : " + methodCollection.size());
 			methodNodesInClassNode.put(className, methodCollection);
 		}
 		long end = System.nanoTime();
