@@ -45,7 +45,7 @@ public class NodeJSON
 	public String getProperty(String prop) 
 	{
 		JSONObject obj = data.getJSONObject("data");
-		String property = obj.getString(prop);
+		String property = obj.getString(prop).replace('$', '.');
 		return property;
 	}
 }
