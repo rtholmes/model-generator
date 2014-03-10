@@ -2,6 +2,12 @@ package Node;
 
 import org.json.JSONObject;
 
+/*
+ * 
+ * Represents a generic Graph Node in the Graph DB. Can represent a class, method, field, method parameter, 
+ * method return type, etc.
+ * 
+ */
 
 public class NodeJSON
 {
@@ -18,13 +24,10 @@ public class NodeJSON
 		data = obj;
 	}
 	
-	public static void main(String[] args) 
-	{
-		
-	}
-	
 	public Integer getNodeNumber()
 	{
+		//Identify Node Id (neo4j automatically assigns every node an Id) based on it being used in URLs in the data.
+		
 		if(data.has("indexed"))
 		{
 			String[] temp = ((String) data.get("indexed")).split("/");
@@ -45,5 +48,4 @@ public class NodeJSON
 		String property = obj.getString(prop);
 		return property;
 	}
-
 }
