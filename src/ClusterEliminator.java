@@ -58,6 +58,7 @@ public class ClusterEliminator
 		}
 		return null;
 	}
+	
 
 	public String findRightPackage(String shortName)
 	{
@@ -72,8 +73,9 @@ public class ClusterEliminator
 		ClusterEliminator celim = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 		
 		
-		//celim.test();
-		//HashSet<String> cluster = celim.clustersMap.get("Iterable");
+		celim.test();
+		HashSet<String> cluster = celim.clustersMap.get("Iterable");
+		System.out.println(cluster);
 		
 	}
 	
@@ -122,7 +124,7 @@ public class ClusterEliminator
 	}
 	
 
-/*	public void test()
+	public void test()
 	{
 		int yc = 0, nc = 0;
 		for(String shortName : clustersMap.keySet())
@@ -130,7 +132,9 @@ public class ClusterEliminator
 			if(originalClassMap.containsKey(shortName))
 			{
 				System.out.println(shortName);
-				String x = this.findRightClass(shortName);
+				//String x = this.findRightClass(shortName);
+				String x = this.findRightPackage(shortName);
+				
 				if(x!= null)
 					yc++;
 				else
@@ -141,10 +145,19 @@ public class ClusterEliminator
 				nc++;
 
 		}
+		HashSet<String> unique = new HashSet<String>();
+		for(HashSet<String> origclass: clustersMap.values())
+		{
+			for(String cl : origclass)
+			{
+				unique.add(cl);
+			}
+		}
+		System.out.println(unique.size());
 		//System.out.println(clustersMap.values().size());
 		System.out.println("yes: " + yc + " nc : " + nc);
 		System.out.println(originalClassMap.keySet().size());
-	}*/
+	}
 	
 	public void getOriginalClassesMap() throws IOException
 	{
