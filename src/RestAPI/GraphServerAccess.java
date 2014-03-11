@@ -648,6 +648,30 @@ public class GraphServerAccess
 		}
 		else
 		{
+			/*
+			String cypher = "START root=node({startName}) MATCH (root)-[:RETURN_TYPE]->(container) RETURN container LIMIT 1";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("startName", node.getNodeNumber());
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			JSONObject jsonArray = null;
+			try 
+			{
+				jsonArray = new JSONObject(jsonString);
+			} 
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			JSONArray temptempArray = (JSONArray)tempArray.get(0);
+			returnNode = new NodeJSON(temptempArray.getJSONObject(0));
+			methodReturnCache.put(node, returnNode);
+			*/
+			///*
 			String outgoingrel = node.getJSONObject().getString("outgoing_relationships");
 			JSONArray relationshipsArray = GraphServerAccess.queryURI(outgoingrel);
 			for(int i=0; i<relationshipsArray.length(); i++)
@@ -660,9 +684,10 @@ public class GraphServerAccess
 					break;
 				}
 			}
+			//*/
 		}
 		long end = System.nanoTime();
-		if(returnNode!=null)
+		if(returnNode != null)
 			logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString() + " - " + returnNode.getProperty("id").toString(), end, start);
 		return returnNode;
 	}

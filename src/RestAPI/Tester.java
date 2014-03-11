@@ -1,7 +1,12 @@
 package RestAPI;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.neo4j.kernel.StoreLockException;
 
 import Node.IndexHits;
 import Node.NodeIndex;
@@ -31,7 +36,7 @@ public class Tester
 	public static NodeIndex allMethodsIndex;
 	private static NodeIndex newParentsIndex;
 
-	public static void main(String[] args) 
+	public static void main(String[] args) throws StoreLockException, IOException 
 	{
 		classIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
 		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id/");
@@ -39,18 +44,17 @@ public class Tester
 		shortMethodIndex = new NodeIndex(DB_URI + "/index/node/short_methods/short_name/");
 		allMethodsIndex = new NodeIndex(DB_URI + "/index/node/allMethodsIndex/classId/");
 		newParentsIndex = new NodeIndex(DB_URI + "/index/node/parentNodes/childId/");
-		
-		IndexHits<NodeJSON> hits = shortClassIndex.get("Log");	
-		for(NodeJSON hit: hits)
+		graphDb = new GraphServerAccess(DB_URI);
+		IndexHits<NodeJSON> classes = graphDb.getCandidateClassNodes("AutoCompleteTextView", new HashMap<String, IndexHits<NodeJSON>>());
+		for(NodeJSON classNode : classes)
 		{
-			String outgoingrel = hit.getJSONObject().getString("outgoing_relationships");
-			JSONArray arr = GraphServerAccess.queryURI(outgoingrel);
-			for(int i=0; i<arr.length(); i++)
+			ArrayList<NodeJSON> methods = graphDb.getMethodNodes(classNode, new HashMap<String, ArrayList<NodeJSON>>());
+			for(NodeJSON method : methods)
 			{
-				JSONObject obj = arr.getJSONObject(i);
-				System.out.println(obj.toString(2));
-				
+				System.out.println(method.getProperty("id"));
 			}
+			
 		}
+		
 	}
 }
