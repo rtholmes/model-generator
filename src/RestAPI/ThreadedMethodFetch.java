@@ -2,6 +2,8 @@ package RestAPI;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 import Node.IndexHits;
@@ -15,6 +17,8 @@ public class ThreadedMethodFetch implements Runnable
 	private HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache;
 	private HashMap<NodeJSON, NodeJSON> methodContainerCache;
 	private HashMap<NodeJSON, NodeJSON> methodReturnCache;
+	private int NThreads = 20;
+	ExecutorService getMethodContainerExecutor = Executors.newFixedThreadPool(NThreads);
 	
 	public ThreadedMethodFetch(String methodExactName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache, HashMap<NodeJSON, NodeJSON> methodContainerCache, HashMap<NodeJSON, NodeJSON> methodReturnCache, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache, GraphServerAccess graphModel)
 	{
@@ -32,6 +36,21 @@ public class ThreadedMethodFetch implements Runnable
 	@Override
 	public void run()
 	{
-		model.getCandidateMethodNodes(methodExactName, candidateMethodNodesCache);
+		ArrayList<NodeJSON> methods = model.getCandidateMethodNodes(methodExactName, candidateMethodNodesCache);
+		for(NodeJSON method : methods)
+		{
+			model.getMethodParams(method, methodParameterCache);
+			
+			//ThreadedMethodContainerFetch tmcf = new ThreadedMethodContainerFetch(method, methodContainerCache, model);
+			//getMethodContainerExecutor.execute(tmcf);
+			
+			
+		}
+		
+		/*getMethodContainerExecutor.shutdown();
+		while(!getMethodContainerExecutor.isTerminated())
+		{
+			
+		}*/
 	}
 }
