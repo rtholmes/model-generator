@@ -27,34 +27,25 @@ public class Tester
 	private static GraphServerAccess graphDb;
 	private static final String DB_URI = "http://gadget.cs:7474/db/data";
 
-	public static NodeIndex classIndex ;
-	public static NodeIndex methodIndex ;
-
-	public static NodeIndex shortClassIndex ;
-	public static NodeIndex shortMethodIndex ;
-	
-	public static NodeIndex allMethodsIndex;
-	private static NodeIndex newParentsIndex;
 
 	public static void main(String[] args) throws StoreLockException, IOException 
 	{
-		classIndex = new NodeIndex(DB_URI + "/index/node/classes/id/");
-		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id/");
-		shortClassIndex = new NodeIndex(DB_URI + "/index/node/short_classes/short_name/");
-		shortMethodIndex = new NodeIndex(DB_URI + "/index/node/short_methods/short_name/");
-		allMethodsIndex = new NodeIndex(DB_URI + "/index/node/allMethodsIndex/classId/");
-		newParentsIndex = new NodeIndex(DB_URI + "/index/node/parentNodes/childId/");
 		graphDb = new GraphServerAccess(DB_URI);
-		IndexHits<NodeJSON> classes = graphDb.getCandidateClassNodes("AutoCompleteTextView", new HashMap<String, IndexHits<NodeJSON>>());
-		for(NodeJSON classNode : classes)
+		long startTime = System.nanoTime();
+		IndexHits<NodeJSON> classes = graphDb.getCandidateClassNodes("View", new HashMap<String, IndexHits<NodeJSON>>());
+		for(final NodeJSON classNode : classes)
 		{
-			ArrayList<NodeJSON> methods = graphDb.getMethodNodes(classNode, new HashMap<String, ArrayList<NodeJSON>>());
-			for(NodeJSON method : methods)
-			{
-				System.out.println(method.getProperty("id"));
-			}
-			
 		}
+		
+		long endTime = System.nanoTime();
+		double time = (double)(endTime-startTime)/(1000000000);
+		System.out.println(time);
+		
+	}
+
+
+	public void run() 
+	{
 		
 	}
 }
