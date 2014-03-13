@@ -34,6 +34,11 @@ public class ThreadedMethodFetch implements Runnable
 	}
 	
 
+	/*
+	 * (non-Javadoc)
+	 * @see java.lang.Runnable#run()
+	 * Fetches candidate nodes having said shortmethod names into cache
+	 */
 
 
 	@Override

@@ -13,6 +13,7 @@ public class ThreadedMethodContainerFetch implements Runnable
 	private HashMap<NodeJSON, NodeJSON> methodContainerCache;
 	private ArrayList<NodeJSON> replacementClassNodesList;
 	
+
 	public ThreadedMethodContainerFetch(NodeJSON candidateMethodNode,
 			HashMap<NodeJSON, NodeJSON> methodContainerCache2,
 			ArrayList<NodeJSON> replacementClassNodesList,
@@ -30,5 +31,9 @@ public class ThreadedMethodContainerFetch implements Runnable
 		model.getMethodContainer(methodNode, methodContainerCache);
 	}*/
 	public void run()
-	{}
+	{
+		NodeJSON fcname = model.getMethodContainer(methodNode, methodContainerCache);
+		if(fcname!=null)
+			replacementClassNodesList.add(fcname);
+	}
 }
