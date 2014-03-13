@@ -12,7 +12,7 @@ import com.google.common.collect.HashMultimap;
 import Node.IndexHits;
 import Node.NodeJSON;
 
-public class ThreadedClassFetchHelper implements Runnable 
+public class ThreadedMethodsInClassFetch implements Runnable 
 {
 	
 	private NodeJSON candidateClassNode;
@@ -29,7 +29,7 @@ public class ThreadedClassFetchHelper implements Runnable
 
 
 
-	public ThreadedClassFetchHelper(NodeJSON candidateClassNode,
+	public ThreadedMethodsInClassFetch(NodeJSON candidateClassNode,
 			MethodInvocation treeNode,
 			HashMultimap<Integer, NodeJSON> printmethods,
 			HashMultimap<ArrayList<Integer>, NodeJSON> candidateAccumulator,

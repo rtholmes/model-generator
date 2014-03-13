@@ -368,7 +368,7 @@ public class GraphServerAccess
 			try 
 			{
 				jsonArray = new JSONObject(jsonString);
-			} 
+			}
 			catch (ParseException e) 
 			{
 				e.printStackTrace();
