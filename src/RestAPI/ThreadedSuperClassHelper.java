@@ -1,5 +1,6 @@
 package RestAPI;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 
@@ -7,17 +8,14 @@ import java.util.HashMap;
 import Node.IndexHits;
 import Node.NodeJSON;
 
-public class ThreadedClassFetch implements Runnable 
+public class ThreadedSuperClassHelper implements Runnable 
 {
 	private GraphServerAccess model;
-	private String className;
+	private String candidateSuperClass;
 	private HashMap<String, IndexHits<NodeJSON>> candidateClassNodesCache;
 	
-	public ThreadedClassFetch(String classNameString, 
-			HashMap<String, IndexHits<NodeJSON>> candidateClassNodesCache, 
-			GraphServerAccess graphModel)
+	public ThreadedSuperClassHelper(String classNameString, HashMap<String, IndexHits<NodeJSON>> candidateClassNodesCache, GraphServerAccess graphModel)
 	{
-		className = classNameString;
 		this.candidateClassNodesCache = candidateClassNodesCache;
 		model = graphModel;
 	}
@@ -28,6 +26,6 @@ public class ThreadedClassFetch implements Runnable
 	@Override
 	public void run() 
 	{
-		model.getCandidateClassNodes(className, candidateClassNodesCache);
+		
 	}
 }

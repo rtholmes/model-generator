@@ -356,7 +356,7 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(container)WHERE container.exactName = {exactName}RETURN container";
+			String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("startName", classNode.getNodeNumber());
 			tempJSON.put("exactName", methodExactName);

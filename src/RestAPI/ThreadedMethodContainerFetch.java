@@ -1,5 +1,6 @@
 package RestAPI;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 
@@ -10,17 +11,24 @@ public class ThreadedMethodContainerFetch implements Runnable
 	private GraphServerAccess model;
 	private NodeJSON methodNode;
 	private HashMap<NodeJSON, NodeJSON> methodContainerCache;
+	private ArrayList<NodeJSON> replacementClassNodesList;
 	
-	public ThreadedMethodContainerFetch(NodeJSON methodNode, HashMap<NodeJSON, NodeJSON> methodContainerCache, GraphServerAccess graphModel)
+	public ThreadedMethodContainerFetch(NodeJSON candidateMethodNode,
+			HashMap<NodeJSON, NodeJSON> methodContainerCache2,
+			ArrayList<NodeJSON> replacementClassNodesList,
+			GraphServerAccess graphModel) 
 	{
-		this.methodNode = methodNode;
-		this.methodContainerCache = methodContainerCache;
+		this.methodNode = candidateMethodNode;
+		this.methodContainerCache = methodContainerCache2;
+		this.replacementClassNodesList = replacementClassNodesList;
 		this.model = graphModel;
 	}
 
 	@Override
-	public void run()
+	/*public void run()
 	{
 		model.getMethodContainer(methodNode, methodContainerCache);
-	}
+	}*/
+	public void run()
+	{}
 }
