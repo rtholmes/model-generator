@@ -1,7 +1,7 @@
 package RestAPI;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 
 import Node.NodeJSON;
@@ -11,17 +11,17 @@ public class ThreadedMethodContainerFetch implements Runnable
 	private GraphServerAccess model;
 	private NodeJSON methodNode;
 	private HashMap<NodeJSON, NodeJSON> methodContainerCache;
-	private ArrayList<NodeJSON> replacementClassNodesList;
+	private List<NodeJSON> replacementClassNodesList;
 	
 
 	public ThreadedMethodContainerFetch(NodeJSON candidateMethodNode,
 			HashMap<NodeJSON, NodeJSON> methodContainerCache2,
-			ArrayList<NodeJSON> replacementClassNodesList,
+			List<NodeJSON> methodContainerList,
 			GraphServerAccess graphModel) 
 	{
 		this.methodNode = candidateMethodNode;
 		this.methodContainerCache = methodContainerCache2;
-		this.replacementClassNodesList = replacementClassNodesList;
+		this.replacementClassNodesList = methodContainerList;
 		this.model = graphModel;
 	}
 

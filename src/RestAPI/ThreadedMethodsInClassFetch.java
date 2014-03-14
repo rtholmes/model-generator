@@ -13,7 +13,7 @@ public class ThreadedMethodsInClassFetch implements Runnable
 {
 	
 	private NodeJSON candidateClassNode;
-	private MethodInvocation treeNode;
+	private String treeNodeName;
 	private GraphServerAccess model;
 	private HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache;
 	private List<NodeJSON> candidateMethodNodes;
@@ -22,14 +22,14 @@ public class ThreadedMethodsInClassFetch implements Runnable
 
 
 	public ThreadedMethodsInClassFetch(NodeJSON candidateClassNode,
-			MethodInvocation treeNode,
+			String treeNodeName,
 			List<NodeJSON> candidateMethodNodes, 
 			HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache, 
 			HashMap<NodeJSON, NodeJSON> methodContainerCache, 
 			GraphServerAccess graphModel) 
 	{
 		this.candidateClassNode = candidateClassNode;
-		this.treeNode = treeNode;
+		this.treeNodeName = treeNodeName;
 		this.candidateMethodNodesCache = candidateMethodNodesCache;
 		this.model = graphModel;
 		this.candidateMethodNodes = candidateMethodNodes;
@@ -42,7 +42,7 @@ public class ThreadedMethodsInClassFetch implements Runnable
 	@Override
 	public void run() 
 	{
-		ArrayList<NodeJSON> candidateMethods = model.getMethodNodesInClassNode(candidateClassNode,treeNode.getName().toString(), candidateMethodNodesCache);
+		ArrayList<NodeJSON> candidateMethods = model.getMethodNodesInClassNode(candidateClassNode, treeNodeName, candidateMethodNodesCache);
 		for(NodeJSON candidateMethod : candidateMethods)
 		{
 			synchronized (candidateMethodNodes) 

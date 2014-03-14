@@ -70,7 +70,7 @@ public class ClusterEliminator
 			return null;
 	}
 
-	public static void main(String[] args) throws IOException 
+	/*public static void main(String[] args) throws IOException 
 	{
 		ClusterEliminator celim = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 		
@@ -78,7 +78,7 @@ public class ClusterEliminator
 		//celim.test();
 		//HashSet<String> cluster = celim.clustersMap.get("Iterable");
 		
-	}
+	}*/
 	
 	
 	
