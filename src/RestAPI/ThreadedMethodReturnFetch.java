@@ -3,6 +3,8 @@ package RestAPI;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.json.JSONObject;
+
 import com.google.common.collect.HashMultimap;
 
 
@@ -31,6 +33,11 @@ public class ThreadedMethodReturnFetch implements Runnable
 	}
 
 	@Override
+	/*
+	 * original run method
+	 */
+	 
+	
 	public void run()
 	{
 		NodeJSON retElement = model.getMethodReturn(methodNode, methodReturnCache);
@@ -40,4 +47,19 @@ public class ThreadedMethodReturnFetch implements Runnable
 		}
 		
 	}
+	
+	/*public void run()
+	{
+		extractClassId(methodNode.getProperty("id"));
+		extractExactClassName(methodNode.getProperty("id"));
+		JSONObject data = new JSONObject();
+		data.put("id", classId);
+		data.put("exactName", exactClassName);
+		JSONObject obj = new JSONObject();
+		obj.put("data", data);
+		
+		NodeJSON fcname = new NodeJSON(obj);
+		if(fcname!=null && replacementClassNodesList!=null)
+			replacementClassNodesList.add(fcname);
+	}*/
 }

@@ -24,7 +24,7 @@ public class NodeJSON
 		data = obj;
 	}
 	
-	public Integer getNodeNumber()
+/*	public Integer getNodeNumber()
 	{
 		//Identify Node Id (neo4j automatically assigns every node an Id) based on it being used in URLs in the data.
 		
@@ -41,11 +41,12 @@ public class NodeJSON
 			return Integer.valueOf(nodeNumber);
 		}
 	}
-
+*/
 	public String getProperty(String prop) 
 	{
 		JSONObject obj = data.getJSONObject("data");
-		String property = obj.getString(prop).replace('$', '.');
+		//String property = obj.getString(prop).replace('$', '.');
+		String property = obj.getString(prop);
 		return property;
 	}
 }

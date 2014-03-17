@@ -27,27 +27,27 @@ public class GraphServerAccess
 
 	private NodeIndex methodIndex ;
 	private NodeIndex newParentsIndex;
-	
-	
+
+
 	public Logger logger = new Logger();
 
 	private ClusterEliminator cEliminator;
-	
+
 
 	public GraphServerAccess(String input_oracle) throws StoreLockException, IOException
 	{
 		DB_URI = input_oracle;
 		//DB_URI = "http://gadget.cs:7474/db/data";
-		
+
 		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
-		
+
 		//logger.disableAccessTimes();
 		//logger.disableCacheHit();
-		
+
 		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id");
 		newParentsIndex = new NodeIndex(DB_URI + "/index/node/parentNodes/childId/");
 	}
-	
+
 	public static JSONArray queryURI(String URI)
 	{
 		WebResource resource = Client.create().resource(URI);
@@ -180,7 +180,7 @@ public class GraphServerAccess
 				}
 			}
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
-		
+
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
@@ -209,7 +209,7 @@ public class GraphServerAccess
 	public boolean checkIfParentNode(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
 	{
 		long start = System.nanoTime();
-		
+
 		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
 		{
 			long end = System.nanoTime();
@@ -312,7 +312,7 @@ public class GraphServerAccess
 				classMethodCollection.add(returnCollection);
 			}
 			shortClassShortMethodCache.put(classExactName+'.'+methodExactName, classMethodCollection);
-			
+
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), classExactName+'.'+methodExactName, end, start);
@@ -356,9 +356,11 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
+			//String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
+			String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
 			JSONObject tempJSON = new JSONObject();
-			tempJSON.put("startName", classNode.getNodeNumber());
+			//tempJSON.put("startName", classNode.getNodeNumber());
+			tempJSON.put("classname", classNode.getProperty("id"));
 			tempJSON.put("exactName", methodExactName);
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
@@ -454,7 +456,7 @@ public class GraphServerAccess
 		}
 		return _id;
 	}
-	
+
 	public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
@@ -513,10 +515,11 @@ public class GraphServerAccess
 		}
 		else
 		{
-			/*
-			String cypher = "START root=node({startName}) MATCH (root)-[:RETURN_TYPE]->(container) RETURN container LIMIT 1";
+			///*
+			String cypher = "START root=node:methods(id = {methodName}) MATCH (root)-[:RETURN_TYPE]->(container) RETURN container LIMIT 1";
 			JSONObject tempJSON = new JSONObject();
-			tempJSON.put("startName", node.getNodeNumber());
+			//tempJSON.put("startName", node.getNodeNumber());
+			tempJSON.put("methodName", node.getProperty("id"));
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
@@ -535,8 +538,8 @@ public class GraphServerAccess
 			JSONArray temptempArray = (JSONArray)tempArray.get(0);
 			returnNode = new NodeJSON(temptempArray.getJSONObject(0));
 			methodReturnCache.put(node, returnNode);
-			*/
-			///*
+			// */
+			/*
 			String outgoingrel = node.getJSONObject().getString("outgoing_relationships");
 			JSONArray relationshipsArray = GraphServerAccess.queryURI(outgoingrel);
 			for(int i=0; i<relationshipsArray.length(); i++)
@@ -549,7 +552,7 @@ public class GraphServerAccess
 					break;
 				}
 			}
-			//*/
+			*/
 		}
 		long end = System.nanoTime();
 		if(returnNode != null)
@@ -568,9 +571,10 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=node({startName}) MATCH (root)-[:IS_METHOD]->(container) RETURN container LIMIT 1";
+			String cypher = "START root=node:methods(id = {methodName}) MATCH (root)-[:IS_METHOD]->(container) RETURN container LIMIT 1";
+
 			JSONObject tempJSON = new JSONObject();
-			tempJSON.put("startName", node.getNodeNumber());
+			tempJSON.put("methodName", node.getProperty("id"));
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
@@ -618,9 +622,11 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method) RETURN method";
+			//String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method) RETURN method";
+			String cypher = "START node:classes(id = {className}) MATCH (root)-[:HAS_METHOD]->(method) RETURN method";
 			JSONObject tempJSON = new JSONObject();
-			tempJSON.put("startName", parentNode.getNodeNumber());
+			tempJSON.put("className", parentNode.getProperty("id"));
+			//tempJSON.put("startName", parentNode.getNodeNumber());
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
@@ -655,5 +661,5 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), className + "."  , end, start);
 		return methodCollection;
 	}
-	
+
 }
