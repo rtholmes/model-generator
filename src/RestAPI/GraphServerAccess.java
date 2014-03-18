@@ -228,7 +228,7 @@ public class GraphServerAccess
 		}
 		else
 		{
-			String cypher = "START root=parentNodes(childId={childId}) RETURN root";
+			String cypher = "START root=node:parentNodes(childId={childId}) RETURN root";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("childId", childId);
 			JSONObject json = new JSONObject();
@@ -306,7 +306,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			System.out.println(jsonArray.toString(2));
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			for(int i=0; i<tempArray.length(); i++)
 			{
