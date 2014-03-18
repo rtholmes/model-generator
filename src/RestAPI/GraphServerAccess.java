@@ -306,13 +306,14 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
+			System.out.println(jsonArray.toString(2));
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			for(int i=0; i<tempArray.length(); i++)
 			{
-				JSONArray temptempArray = tempArray.getJSONArray(i);
-				JSONObject classObj = temptempArray.getJSONObject(0);
-				JSONObject methodObj = temptempArray.getJSONObject(1);
-				JSONObject returnObj = temptempArray.getJSONObject(2);
+				JSONArray arr = tempArray.getJSONArray(i);
+				JSONObject classObj = arr.getJSONObject(0);
+				JSONObject methodObj = arr.getJSONObject(1);
+				JSONObject returnObj = arr.getJSONObject(2);
 				NodeJSON classNodejson = new NodeJSON(classObj);
 				NodeJSON methodNodejson = new NodeJSON(methodObj);
 				NodeJSON returnNodejson = new NodeJSON(returnObj);
