@@ -133,7 +133,7 @@ public class GraphServerAccess
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
 		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), className, end, start);
+		logger.printAccessTime(getCurrentMethodName(), className + " "+ candidateClassCollection.size(), end, start);
 		return candidateClassCollection;
 	}
 
@@ -337,6 +337,7 @@ public class GraphServerAccess
 		return output.toString();
 	}
 
+	//used
 	public ArrayList<NodeJSON> getMethodNodesInClassNode(NodeJSON classNode, String methodExactName,  HashMap<String, IndexHits<NodeJSON>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
@@ -356,10 +357,8 @@ public class GraphServerAccess
 		}
 		else
 		{
-			//String cypher = "START root=node({startName})MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
-			String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method)WHERE method.exactName = {exactName}RETURN method";
+			String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method) WHERE method.exactName = {exactName} RETURN method";
 			JSONObject tempJSON = new JSONObject();
-			//tempJSON.put("startName", classNode.getNodeNumber());
 			tempJSON.put("classname", classNode.getProperty("id"));
 			tempJSON.put("exactName", methodExactName);
 			JSONObject json = new JSONObject();
@@ -375,25 +374,19 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
+			System.out.println(jsonArray.toString(3));
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			if(tempArray.length()>0)
+			for(int i=0; i<tempArray.length(); i++)
 			{
-				JSONArray temptempArray = (JSONArray)tempArray.get(0);
-				for(int i=0; i<temptempArray.length(); i++)
-				{
-					JSONObject obj = temptempArray.getJSONObject(i);
-					NodeJSON nodejson = new NodeJSON(obj);
-					methodCollection.add(nodejson);
-				}
-			}
-			else
-			{
-				//System.out.println("$$ "+tempArray);
+				JSONArray arr = tempArray.getJSONArray(i);
+				JSONObject obj = arr.getJSONObject(0);
+				NodeJSON nodejson = new NodeJSON(obj);
+				methodCollection.add(nodejson);
 			}
 			methodNodesInClassNode.put(className, methodCollection);
 		}
 		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName, end, start);
+		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName + ":" + methodCollection.size(), end, start);
 		return methodCollection;
 	}
 
