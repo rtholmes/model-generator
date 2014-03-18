@@ -16,7 +16,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 
 import Node.IndexHits;
-import Node.NodeIndex;
 import Node.NodeJSON;
 
 
@@ -25,8 +24,6 @@ public class GraphServerAccess
 {
 	private static String DB_URI;
 
-	private NodeIndex methodIndex ;
-	private NodeIndex newParentsIndex;
 
 
 	public Logger logger = new Logger();
@@ -44,8 +41,6 @@ public class GraphServerAccess
 		//logger.disableAccessTimes();
 		//logger.disableCacheHit();
 
-		methodIndex = new NodeIndex(DB_URI + "/index/node/methods/id");
-		newParentsIndex = new NodeIndex(DB_URI + "/index/node/parentNodes/childId/");
 	}
 
 	public static JSONArray queryURI(String URI)
@@ -88,6 +83,7 @@ public class GraphServerAccess
 		return stackTraceElements[1].toString();
 	}
 
+	//json works
 	public IndexHits<NodeJSON> getCandidateClassNodes(String className, HashMap<String, IndexHits<NodeJSON>> candidateNodesCache) 
 	{
 		long start = System.nanoTime();
@@ -120,15 +116,12 @@ public class GraphServerAccess
 				e.printStackTrace();
 			}
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			if(tempArray.length()>0)
+			for(int i=0; i<tempArray.length(); i++)
 			{
-				for(int i=0; i<tempArray.length(); i++)
-				{
-					JSONArray obj = tempArray.getJSONArray(i);
-					JSONObject toInsert = obj.getJSONObject(0);
-					NodeJSON nodejson = new NodeJSON(toInsert);
-					candidateClassCollection.add(nodejson);
-				}
+				JSONArray arr = tempArray.getJSONArray(i);
+				JSONObject obj = arr.getJSONObject(0);
+				NodeJSON nodejson = new NodeJSON(obj);
+				candidateClassCollection.add(nodejson);
 			}
 			candidateNodesCache.put(className, candidateClassCollection);
 		}
@@ -136,7 +129,8 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), className + " "+ candidateClassCollection.size(), end, start);
 		return candidateClassCollection;
 	}
-
+	
+	//json works
 	public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
 	{
 		long start = System.nanoTime(); 
@@ -169,15 +163,12 @@ public class GraphServerAccess
 				e.printStackTrace();
 			}
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			if(tempArray.length()>0)
+			for(int i=0; i<tempArray.length(); i++)
 			{
-				for(int i=0; i<tempArray.length(); i++)
-				{
-					JSONArray obj = tempArray.getJSONArray(i);
-					JSONObject toInsert = obj.getJSONObject(0);
-					NodeJSON nodejson = new NodeJSON(toInsert);
-					candidateMethodNodes.add(nodejson);
-				}
+				JSONArray arr = tempArray.getJSONArray(i);
+				JSONObject obj = arr.getJSONObject(0);
+				NodeJSON nodejson = new NodeJSON(obj);
+				candidateMethodNodes.add(nodejson);
 			}
 			candidateMethodNodesCache.put(methodName, candidateMethodNodes);
 
@@ -206,6 +197,7 @@ public class GraphServerAccess
 		return null;
 	}
 
+	//json works
 	public boolean checkIfParentNode(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
 	{
 		long start = System.nanoTime();
@@ -236,10 +228,37 @@ public class GraphServerAccess
 		}
 		else
 		{
+			String cypher = "START root=parentNodes(childId={childId}) RETURN root";
+			JSONObject tempJSON = new JSONObject();
+			tempJSON.put("childId", childId);
+			JSONObject json = new JSONObject();
+			json.put("query", cypher);
+			json.put("params", tempJSON);
+			ArrayList<NodeJSON> parentElementCollection = new ArrayList<NodeJSON>();
+			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+			JSONObject jsonArray = null;
+			try 
+			{
+				jsonArray = new JSONObject(jsonString);
+			}
+			catch (ParseException e) 
+			{
+				e.printStackTrace();
+			}
+			JSONArray tempArray = (JSONArray) jsonArray.get("data");
+			for(int i=0; i<tempArray.length(); i++)
+			{
+				JSONArray arr = tempArray.getJSONArray(i);
+				JSONObject obj = arr.getJSONObject(0);
+				NodeJSON nodejson = new NodeJSON(obj);
+				parentElementCollection.add(nodejson);
+			}
+			parentNodeCache.put(childId, parentElementCollection);
+			
+			//
 			boolean ans = false;
-			IndexHits<NodeJSON> candidateNodes = newParentsIndex.get(childId);
 			ArrayList<NodeJSON> parentList = new ArrayList<NodeJSON>();
-			for(NodeJSON candidate : candidateNodes)
+			for(NodeJSON candidate : parentElementCollection)
 			{
 				parentList.add(candidate);
 				if(((String)candidate.getProperty("id")).equals(parentId))
@@ -247,15 +266,13 @@ public class GraphServerAccess
 					ans = true;
 				}
 			}
-			//Node object = allClassIndex.get("id", "java.lang.Object").getSingle();
-			//parentList.add(object);
-			parentNodeCache.put(childId, parentList);
 			long end = System.nanoTime();
 			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 			return ans;
 		}
 	}
 
+	//json works i think
 	public ArrayList<ArrayList<NodeJSON>> getMethodNodeWithShortClass(String methodExactName, String classExactName, HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache, HashMap<NodeJSON, NodeJSON> methodReturnCache, HashMap<NodeJSON, NodeJSON> methodContainerCache)
 	{
 		long start = System.nanoTime(); 
@@ -290,27 +307,24 @@ public class GraphServerAccess
 				e.printStackTrace();
 			}
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			if(tempArray.length()>0)
+			for(int i=0; i<tempArray.length(); i++)
 			{
-				for(int i=0; i<tempArray.length(); i++)
-				{
-					JSONArray temptempArray = tempArray.getJSONArray(i);
-					JSONObject classObj = temptempArray.getJSONObject(0);
-					JSONObject methodObj = temptempArray.getJSONObject(1);
-					JSONObject returnObj = temptempArray.getJSONObject(2);
-					NodeJSON classNodejson = new NodeJSON(classObj);
-					NodeJSON methodNodejson = new NodeJSON(methodObj);
-					NodeJSON returnNodejson = new NodeJSON(returnObj);
-					classCollection.add(classNodejson);
-					methodCollection.add(methodNodejson);
-					returnCollection.add(returnNodejson);
-					methodReturnCache.put(methodNodejson, returnNodejson);
-					methodContainerCache.put(methodNodejson, classNodejson);
-				}
-				classMethodCollection.add(classCollection);
-				classMethodCollection.add(methodCollection);
-				classMethodCollection.add(returnCollection);
+				JSONArray temptempArray = tempArray.getJSONArray(i);
+				JSONObject classObj = temptempArray.getJSONObject(0);
+				JSONObject methodObj = temptempArray.getJSONObject(1);
+				JSONObject returnObj = temptempArray.getJSONObject(2);
+				NodeJSON classNodejson = new NodeJSON(classObj);
+				NodeJSON methodNodejson = new NodeJSON(methodObj);
+				NodeJSON returnNodejson = new NodeJSON(returnObj);
+				classCollection.add(classNodejson);
+				methodCollection.add(methodNodejson);
+				returnCollection.add(returnNodejson);
+				methodReturnCache.put(methodNodejson, returnNodejson);
+				methodContainerCache.put(methodNodejson, classNodejson);
 			}
+			classMethodCollection.add(classCollection);
+			classMethodCollection.add(methodCollection);
+			classMethodCollection.add(returnCollection);
 			shortClassShortMethodCache.put(classExactName+'.'+methodExactName, classMethodCollection);
 
 		}
@@ -319,25 +333,7 @@ public class GraphServerAccess
 		return classMethodCollection;
 	}
 
-	private static String escapeForLucene(String input)
-	{
-		StringBuilder output = new StringBuilder();
-		for(int i=0; i<input.length(); i++)
-		{
-			char x = input.charAt(i);
-			if(x=='[' || x==']' || x=='+' || x=='^' || x=='"' || x=='?')
-			{
-				output.append("\\"+x);
-			}
-			else
-			{
-				output.append(x);
-			}
-		}
-		return output.toString();
-	}
-
-	//used
+	//json works
 	public ArrayList<NodeJSON> getMethodNodesInClassNode(NodeJSON classNode, String methodExactName,  HashMap<String, IndexHits<NodeJSON>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
@@ -374,7 +370,6 @@ public class GraphServerAccess
 			{
 				e.printStackTrace();
 			}
-			System.out.println(jsonArray.toString(3));
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
 			for(int i=0; i<tempArray.length(); i++)
 			{
@@ -390,17 +385,7 @@ public class GraphServerAccess
 		return methodCollection;
 	}
 
-	public boolean checkIfClassHasMethod(NodeJSON classNode, String methodExactName)
-	{
-		String name = classNode.getProperty("id") + "." + methodExactName + "\\(*";
-		name = escapeForLucene(name);
-		IndexHits<NodeJSON> hits = methodIndex.query("id", name);
-		if(hits.size()>0)
-			return true;
-		else
-			return false;
-	}
-
+	//json works
 	public ArrayList<NodeJSON> getMethodParams(NodeJSON node, HashMap<NodeJSON, ArrayList<NodeJSON>> methodParameterCache) 
 	{
 		long start = System.nanoTime();
@@ -449,7 +434,8 @@ public class GraphServerAccess
 		}
 		return _id;
 	}
-
+	
+	//json works
 	public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
 	{
 		long start = System.nanoTime(); 
@@ -483,9 +469,9 @@ public class GraphServerAccess
 			{
 				for(int i=0; i<tempArray.length(); i++)
 				{
-					JSONArray obj = tempArray.getJSONArray(i);
-					JSONObject toInsert = obj.getJSONObject(0);
-					NodeJSON nodejson = new NodeJSON(toInsert);
+					JSONArray arr = tempArray.getJSONArray(i);
+					JSONObject obj = arr.getJSONObject(0);
+					NodeJSON nodejson = new NodeJSON(obj);
 					classElementCollection.add(nodejson);
 				}
 			}
@@ -495,7 +481,8 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
 	}
-
+	
+	//json works
 	public NodeJSON getMethodReturn(NodeJSON node, HashMap<NodeJSON, NodeJSON> methodReturnCache) 
 	{
 
@@ -508,10 +495,8 @@ public class GraphServerAccess
 		}
 		else
 		{
-			///*
 			String cypher = "START root=node:methods(id = {methodName}) MATCH (root)-[:RETURN_TYPE]->(container) RETURN container LIMIT 1";
 			JSONObject tempJSON = new JSONObject();
-			//tempJSON.put("startName", node.getNodeNumber());
 			tempJSON.put("methodName", node.getProperty("id"));
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
@@ -531,21 +516,6 @@ public class GraphServerAccess
 			JSONArray temptempArray = (JSONArray)tempArray.get(0);
 			returnNode = new NodeJSON(temptempArray.getJSONObject(0));
 			methodReturnCache.put(node, returnNode);
-			// */
-			/*
-			String outgoingrel = node.getJSONObject().getString("outgoing_relationships");
-			JSONArray relationshipsArray = GraphServerAccess.queryURI(outgoingrel);
-			for(int i=0; i<relationshipsArray.length(); i++)
-			{
-				JSONObject relationship = relationshipsArray.getJSONObject(i);
-				if(relationship.get("type").equals("RETURN_TYPE"))
-				{
-					returnNode = new NodeJSON(GraphServerAccess.queryURI((String)relationship.get("end")).getJSONObject(0));
-					methodReturnCache.put(node, returnNode);
-					break;
-				}
-			}
-			*/
 		}
 		long end = System.nanoTime();
 		if(returnNode != null)
@@ -553,6 +523,7 @@ public class GraphServerAccess
 		return returnNode;
 	}
 
+	//json works
 	public NodeJSON getMethodContainer(NodeJSON node,HashMap<NodeJSON, NodeJSON> methodContainerCache) 
 	{
 		long start = System.nanoTime(); 
@@ -602,7 +573,7 @@ public class GraphServerAccess
 		return jsonString;
 	}
 
-	public IndexHits<NodeJSON> getAllMethodsInClass(NodeJSON parentNode, HashMap<String, IndexHits<NodeJSON>> allMethodsInClass) 
+	/*public IndexHits<NodeJSON> getAllMethodsInClass(NodeJSON parentNode, HashMap<String, IndexHits<NodeJSON>> allMethodsInClass) 
 	{
 
 		long start = System.nanoTime(); 
@@ -634,8 +605,6 @@ public class GraphServerAccess
 				e.printStackTrace();
 			}
 			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			if(tempArray.length()>0)
-			{
 				JSONArray temptempArray = (JSONArray)tempArray.get(0);
 				for(int i=0; i<temptempArray.length(); i++)
 				{
@@ -643,16 +612,11 @@ public class GraphServerAccess
 					NodeJSON nodejson = new NodeJSON(obj);
 					methodCollection.add(nodejson);
 				}
-			}
-			else
-			{
-				//System.out.println("$$ "+tempArray);
-			}
 			allMethodsInClass.put(className, methodCollection);
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), className + "."  , end, start);
 		return methodCollection;
-	}
+	}*/
 
 }
