@@ -183,7 +183,7 @@ public class GraphServerAccess
 	{
 		if(set.isEmpty())
 			return null;
-		HashSet<NodeJSON> javaSet = new HashSet<NodeJSON>();
+		/*HashSet<NodeJSON> javaSet = new HashSet<NodeJSON>();
 		for(NodeJSON node : set)
 		{
 			if(node.getProperty("id").startsWith("java."))
@@ -191,7 +191,7 @@ public class GraphServerAccess
 		}
 		
 		if(javaSet.size() == 1)
-			return javaSet.iterator().next();
+			return javaSet.iterator().next();*/
 		
 		if(cEliminator.checkIfCluster(set))
 		{
