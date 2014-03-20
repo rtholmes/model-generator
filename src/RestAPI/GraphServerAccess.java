@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 import javax.ws.rs.core.MediaType;
 
@@ -182,6 +183,16 @@ public class GraphServerAccess
 	{
 		if(set.isEmpty())
 			return null;
+		HashSet<NodeJSON> javaSet = new HashSet<NodeJSON>();
+		for(NodeJSON node : set)
+		{
+			if(node.getProperty("id").startsWith("java."))
+				javaSet.add(node);
+		}
+		
+		if(javaSet.size() == 1)
+			return javaSet.iterator().next();
+		
 		if(cEliminator.checkIfCluster(set))
 		{
 			NodeJSON rightClass = cEliminator.findRightClass(set);
