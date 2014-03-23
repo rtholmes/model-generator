@@ -190,8 +190,8 @@ public class GraphServerAccess
 				javaSet.add(node);
 		}
 		
-		if(javaSet.size() == 1)
-			return javaSet.iterator().next();
+		/*if(javaSet.size() == 1)
+			return javaSet.iterator().next();*/
 		
 		if(cEliminator.checkIfCluster(set))
 		{
@@ -208,15 +208,21 @@ public class GraphServerAccess
 		return null;
 	}
 
+	public void blah(int x)
+	{
+		System.out.println("yeah");
+	}
 	//json works
 	public boolean checkIfParentNode(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
 	{
 		long start = System.nanoTime();
-
+		Integer x = 5;
+		blah(5);
+		
 		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
 		{
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId + ": true", end, start);
 			return true;
 		}
 		String parentId = (String) parentNode.getProperty("id");
@@ -229,12 +235,12 @@ public class GraphServerAccess
 				if(((String)parent.getProperty("id")).equals(parentId))
 				{
 					long end = System.nanoTime();
-					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": true", end, start);
 					return true;
 				}
 			}
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": false", end, start);
 			return false;
 		}
 		else
@@ -278,7 +284,7 @@ public class GraphServerAccess
 				}
 			}
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": " + ans, end, start);
 			return ans;
 		}
 	}
