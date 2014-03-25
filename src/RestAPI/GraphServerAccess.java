@@ -175,7 +175,7 @@ public class GraphServerAccess
 
 		}
 		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
+		logger.printAccessTime(getCurrentMethodName(), methodName + candidateMethodNodes.size(), end, start);
 		return candidateMethodNodes;
 	}
 
