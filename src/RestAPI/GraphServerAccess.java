@@ -208,16 +208,11 @@ public class GraphServerAccess
 		return null;
 	}
 
-	public void blah(int x)
-	{
-		System.out.println("yeah");
-	}
 	//json works
 	public boolean checkIfParentNode(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
 	{
 		long start = System.nanoTime();
 		Integer x = 5;
-		blah(5);
 		
 		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
 		{
