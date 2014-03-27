@@ -53,12 +53,6 @@ public class Logger
 		accessTimeFlag = 1;
 	}
 	
-	public void printString(String s)
-	{
-		if(flag == 1)
-			System.out.println(s);
-	}
-	
 	public void printAccessTime(String methodName, String meta, long end, long start)
 	{
 		if(flag == 1 && accessTimeFlag == 1)

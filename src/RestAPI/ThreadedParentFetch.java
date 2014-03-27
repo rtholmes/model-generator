@@ -38,10 +38,8 @@ public class ThreadedParentFetch implements Runnable
 	@Override
 	public void run() 
 	{
+		//ArrayList<NodeJSON> parentNodeList = new ArrayList<NodeJSON>();
 		ArrayList<NodeJSON> parentNodeList = model.getParents(candidateClassNode, parentNodeCache);
-		synchronized(candidateParentNodes)
-		{
-			candidateParentNodes.addAll(parentNodeList);
-		}
+		candidateParentNodes.addAll(parentNodeList);
 	}
 }

@@ -56,8 +56,6 @@ public class ThreadedMethodReturnFetch implements Runnable
 		Integer parentType = treeNode.getParent().getNodeType();
 		if(!interestingNodes.contains(parentType))
 		{
-			System.out.println("PlaceHolder " + methodNode.getProperty("id") + "-" + treeNode.getParent().getNodeType());
-			
 			JSONObject data = new JSONObject();
 			data.put("id", "MyRTPlaceHolderP.MyRTPlaceHolderEN");
 			data.put("exactName", "MyRTPlaceHolderEN");
@@ -73,7 +71,6 @@ public class ThreadedMethodReturnFetch implements Runnable
 			NodeJSON retElement = model.getMethodReturn(methodNode, methodReturnCache);
 			if(retElement!=null)
 			{
-				System.out.println("FromModel " + methodNode.getProperty("id") + "-" + treeNode.getParent().getNodeType());
 				candidateAccumulator.put(scopeArray, retElement);
 			}
 		}
