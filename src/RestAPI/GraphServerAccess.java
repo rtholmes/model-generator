@@ -35,12 +35,11 @@ public class GraphServerAccess
 	public GraphServerAccess(String input_oracle) throws StoreLockException, IOException
 	{
 		DB_URI = input_oracle;
-		//DB_URI = "http://gadget.cs:7474/db/data";
 
 		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 
-		logger.disableAccessTimes();
-		logger.disableCacheHit();
+		//logger.disableAccessTimes();
+		//logger.disableCacheHit();
 
 	}
 
@@ -556,8 +555,14 @@ public class GraphServerAccess
 				{
 					JSONArray arr = tempArray.getJSONArray(i);
 					JSONObject obj = arr.getJSONObject(0);
-					NodeJSON nodejson = new NodeJSON(obj);
-					classElementCollection.add(nodejson);
+					if(obj.has("isInterface") && obj.has("isAbstract") && obj.has("isPrimitive") )
+					{
+						if(obj.get("isInterface").equals("false") && obj.get("isAbstract").equals("false") && obj.get("isPrimitive").equals("false") && (obj.get("vis").equals("PUBLIC") || obj.get("vis").equals("NOTSET")))
+						{
+							NodeJSON nodejson = new NodeJSON(obj);
+							classElementCollection.add(nodejson);
+						}
+					}
 				}
 			}
 			parentNodeCache.put(childId, classElementCollection);
