@@ -64,12 +64,12 @@ public class GraphDatabase
 		logger.disableAccessTimes();
 		logger.disableCacheHit();
 		
-		allClassIndex = graphDb.index().forNodes("classes");
+		/*allClassIndex = graphDb.index().forNodes("classes");
 		methodIndex = graphDb.index().forNodes("methods");
 		shortClassIndex = graphDb.index().forNodes("short_classes");
 		shortMethodIndex = graphDb.index().forNodes("short_methods");
 		allParentsNodeIndex = graphDb.index().forNodes("allParentsString");
-		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");
+		allMethodsIndex = graphDb.index().forNodes("allMethodsIndex");*/
 		
 		newParentsIndex = graphDb.index().forNodes("parentNodes");
 		
