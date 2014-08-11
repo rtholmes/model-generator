@@ -35,11 +35,12 @@ public class GraphServerAccess
 	public GraphServerAccess(String input_oracle) throws StoreLockException, IOException
 	{
 		DB_URI = input_oracle;
+		//DB_URI = "http://gadget.cs:7474/db/data";
 
 		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 
-		logger.disableAccessTimes();
-		logger.disableCacheHit();
+		//logger.disableAccessTimes();
+		//logger.disableCacheHit();
 
 	}
 
@@ -174,7 +175,7 @@ public class GraphServerAccess
 
 		}
 		long end = System.nanoTime();
-		logger.printAccessTime(getCurrentMethodName(), methodName + candidateMethodNodes.size(), end, start);
+		logger.printAccessTime(getCurrentMethodName(), methodName, end, start);
 		return candidateMethodNodes;
 	}
 
@@ -182,14 +183,14 @@ public class GraphServerAccess
 	{
 		if(set.isEmpty())
 			return null;
-		HashSet<NodeJSON> javaSet = new HashSet<NodeJSON>();
+		/*HashSet<NodeJSON> javaSet = new HashSet<NodeJSON>();
 		for(NodeJSON node : set)
 		{
 			if(node.getProperty("id").startsWith("java."))
 				javaSet.add(node);
 		}
 		
-		/*if(javaSet.size() == 1)
+		if(javaSet.size() == 1)
 			return javaSet.iterator().next();*/
 		
 		if(cEliminator.checkIfCluster(set))
@@ -207,92 +208,15 @@ public class GraphServerAccess
 		return null;
 	}
 
-	
+	//json works
 	public boolean checkIfParentNode(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
 	{
 		long start = System.nanoTime();
-		String parentId = (String) parentNode.getProperty("id");
 
-		if(parentId.equals("java.lang.Object"))
-		{
-			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId + ": true", end, start);
-			return true;
-		}
-
-		if(parentNodeCache.containsKey(childId))
-		{
-			logger.printIfCacheHit("parent list found in cache");
-			ArrayList<NodeJSON>parents = parentNodeCache.get(childId);
-			for(NodeJSON parent : parents)
-			{
-				if(((String)parent.getProperty("id")).equals(parentId))
-				{
-					long end = System.nanoTime();
-					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": true", end, start);
-					return true;
-				}
-			}
-			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": false", end, start);
-			return false;
-		}
-		else
-		{
-			String cypher = "START root=node:parentNodes(childId={childId}) RETURN root";
-			JSONObject tempJSON = new JSONObject();
-			tempJSON.put("childId", childId);
-			JSONObject json = new JSONObject();
-			json.put("query", cypher);
-			json.put("params", tempJSON);
-			ArrayList<NodeJSON> parentElementCollection = new ArrayList<NodeJSON>();
-			String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
-			JSONObject jsonArray = null;
-			try 
-			{
-				jsonArray = new JSONObject(jsonString);
-			}
-			catch (ParseException e) 
-			{
-				e.printStackTrace();
-			}
-			JSONArray tempArray = (JSONArray) jsonArray.get("data");
-			for(int i=0; i<tempArray.length(); i++)
-			{
-				JSONArray arr = tempArray.getJSONArray(i);
-				JSONObject obj = arr.getJSONObject(0);
-				NodeJSON nodejson = new NodeJSON(obj);
-				parentElementCollection.add(nodejson);
-			}
-			parentNodeCache.put(childId, parentElementCollection);
-			
-			//
-			boolean ans = false;
-			ArrayList<NodeJSON> parentList = new ArrayList<NodeJSON>();
-			for(NodeJSON candidate : parentElementCollection)
-			{
-				parentList.add(candidate);
-				if(((String)candidate.getProperty("id")).equals(parentId))
-				{
-					ans = true;
-				}
-			}
-			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": " + ans, end, start);
-			return ans;
-		}
-	}
-	
-	//json works
-	public boolean checkIfParentNodeOld(NodeJSON parentNode, String childId, HashMap<String, ArrayList<NodeJSON>> parentNodeCache)
-	{
-		long start = System.nanoTime();
-		Integer x = 5;
-		
 		if(((String)parentNode.getProperty("id")).equals("java.lang.Object"))
 		{
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId + ": true", end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 			return true;
 		}
 		String parentId = (String) parentNode.getProperty("id");
@@ -305,12 +229,12 @@ public class GraphServerAccess
 				if(((String)parent.getProperty("id")).equals(parentId))
 				{
 					long end = System.nanoTime();
-					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": true", end, start);
+					logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 					return true;
 				}
 			}
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": false", end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 			return false;
 		}
 		else
@@ -354,7 +278,7 @@ public class GraphServerAccess
 				}
 			}
 			long end = System.nanoTime();
-			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId +": " + ans, end, start);
+			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 			return ans;
 		}
 	}
@@ -424,23 +348,26 @@ public class GraphServerAccess
 	public ArrayList<NodeJSON> getMethodNodesInClassNode(NodeJSON classNode, String methodExactName,  HashMap<String, IndexHits<NodeJSON>> methodNodesInClassNode)
 	{
 		long start = System.nanoTime(); 
-		String fqn = classNode.getProperty("id") + "." + methodExactName;
 		IndexHits<NodeJSON> methodCollection = new IndexHits<NodeJSON>();
-		if(methodNodesInClassNode.containsKey(fqn))
+		String className = (String) classNode.getProperty("id");
+		if(methodNodesInClassNode.containsKey(classNode))
 		{
+			ArrayList<NodeJSON> methods = methodNodesInClassNode.get(className);
+			for(NodeJSON method: methods)
+			{
+				if(((String)method.getProperty("exactName")).equals(methodExactName))
+				{
+					methodCollection.add(method);
+				}	
+			}
 			logger.printIfCacheHit("cache hit methods in class ++");
-			methodCollection = methodNodesInClassNode.get(fqn);
 		}
 		else
 		{
-			//String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method) WHERE method.exactName = {exactName} RETURN method";
-			String cypher = "START n=node:methods('id:"+ fqn +"*') RETURN n";
-			
+			String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method) WHERE method.exactName = {exactName} RETURN method";
 			JSONObject tempJSON = new JSONObject();
-			
-			//tempJSON.put("classname", classNode.getProperty("id"));
-			//tempJSON.put("exactName", methodExactName);
-			//tempJSON.put("fqn", fqn);
+			tempJSON.put("classname", classNode.getProperty("id"));
+			tempJSON.put("exactName", methodExactName);
 			JSONObject json = new JSONObject();
 			json.put("query", cypher);
 			json.put("params", tempJSON);
@@ -462,7 +389,7 @@ public class GraphServerAccess
 				NodeJSON nodejson = new NodeJSON(obj);
 				methodCollection.add(nodejson);
 			}
-			methodNodesInClassNode.put(fqn, methodCollection);
+			methodNodesInClassNode.put(className, methodCollection);
 		}
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), classNode.getProperty("id")+"."+methodExactName + ":" + methodCollection.size(), end, start);
@@ -555,20 +482,12 @@ public class GraphServerAccess
 				{
 					JSONArray arr = tempArray.getJSONArray(i);
 					JSONObject obj = arr.getJSONObject(0);
-					if(obj.has("isInterface") && obj.has("isAbstract") && obj.has("isPrimitive") )
-					{
-						if(obj.get("isInterface").equals("false") && obj.get("isAbstract").equals("false") && obj.get("isPrimitive").equals("false") && (obj.get("vis").equals("PUBLIC") || obj.get("vis").equals("NOTSET")))
-						{
-							NodeJSON nodejson = new NodeJSON(obj);
-							classElementCollection.add(nodejson);
-						}
-					}
+					NodeJSON nodejson = new NodeJSON(obj);
+					classElementCollection.add(nodejson);
 				}
 			}
 			parentNodeCache.put(childId, classElementCollection);
 		}
-		//s.getParents(GraphServerAccess.java:493) - org.pietschy.wizard.PanelWizardStep : 0.0563
-		//ess.getParents(GraphServerAccess.java:493) - com.extjs.gxt.desktop.client.StartButton : 24.190832406
 		long end = System.nanoTime();
 		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
