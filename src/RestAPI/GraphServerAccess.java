@@ -39,8 +39,8 @@ public class GraphServerAccess
 
 		cEliminator = new ClusterEliminator("class-collisions_update.txt", "forReid.txt");
 
-		//logger.disableAccessTimes();
-		//logger.disableCacheHit();
+		logger.disableAccessTimes();
+		logger.disableCacheHit();
 
 	}
 
