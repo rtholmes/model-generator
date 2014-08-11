@@ -15,7 +15,7 @@ public class ClusterEliminator
 	
 	String collisionsDetectedFile;
 	String originalClassesFile;
-	HashSet<HashSet<String>> clustersSet;   		//A hashset of hashsets of clusters
+	HashSet<HashSet<String>> clustersSet;   		//A hashset of hashsets of clusters.
 	HashMap<String, HashSet<String>> clustersMap;	//A mapping from shortname to clusters
 	HashMap<String, String> originalClassMap;		//A mapping from shortname to the right package (if a cluster)
 	HashMap<String, String> finalMap;				
