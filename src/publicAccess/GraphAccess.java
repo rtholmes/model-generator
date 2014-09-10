@@ -9,6 +9,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.neo4j.kernel.StoreLockException;
 
+import com.sun.jersey.server.impl.model.parameter.multivalued.ExtractorContainerException;
+
 import Node.IndexHits;
 import Node.NodeJSON;
 
@@ -62,6 +64,8 @@ public class GraphAccess
 				for(NodeJSON methodNode : methods)
 				{
 					JSONObject value = methodNode.getJSONObject().getJSONObject("data");
+					String methodName = (String) value.get("id");
+					value.put("className",extractClassName(methodName));
 					jsonArray.put(value);
 				}
 				break;
@@ -74,9 +78,28 @@ public class GraphAccess
 		
 		long endTime = System.nanoTime();
 		double time = (double)(endTime-startTime)/(1000000000);
-		returnValue.put("time", time);
+		//returnValue.put("time", time);
 		returnValue.put("api_elements", jsonArray);
-		returnValue.put("count", jsonArray.length());
+		//returnValue.put("count", jsonArray.length());
 		System.out.println(returnValue.toString(3));
+	}
+	
+	public static String extractClassName(String methodName)	//to store class name and exact method name as ivars
+	{
+		if (methodName.endsWith("<clinit>"))
+		{
+			String array[] = methodName.split(".<clinit>");
+			return array[0];		
+		}
+		else
+		{		
+			String[] array = methodName.split("\\(");
+			array = array[0].split("\\.");
+			String className = array[0];		
+			for (int i=1; i<array.length-1; i++) 
+				className += "." + array[i];
+			return className;
+	 	}
+		
 	}
 }

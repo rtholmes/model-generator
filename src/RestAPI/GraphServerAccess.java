@@ -289,10 +289,7 @@ public class GraphServerAccess
 
 		IndexHits<NodeJSON> candidateClassCollection = new IndexHits<NodeJSON>();
 
-		//String cypher = "START root=node:classes(id={startName}) RETURN root";
-		//String cypher = "START root=node:classes(\"id:" + packageName + "\") WHERE root.isPrimitive = {false} RETURN root";
 		String cypher = "START root=node:classes(\"id:" + packageName + ".*\") WHERE (root.vis = {public} OR root.vis = {notset}) RETURN root";
-		//String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method) WHERE method.exactName = {exactName} RETURN method";
 
 		JSONObject tempJSON = new JSONObject();
 		tempJSON.put("startName", packageName);
