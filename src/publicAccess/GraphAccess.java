@@ -1,0 +1,82 @@
+package publicAccess;
+
+import RestAPI.*;
+
+import java.io.IOException;
+import java.util.HashMap;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.neo4j.kernel.StoreLockException;
+
+import Node.IndexHits;
+import Node.NodeJSON;
+
+
+public class GraphAccess
+{
+	private static GraphServerAccess graphDb;
+	private static final String DB_URI = "http://localhost:7474/db/data";
+
+
+	public static void main(String[] args) throws StoreLockException, IOException 
+	{
+		//(1) Given a package name, what classes does the Oracle know about? 
+		//(2) Given a class (FQN), what methods does it contain? and 
+		//(3) Given a method identifier, which classes (FQNs) declare a method with that name? 
+		
+		int queryType = Integer.valueOf(args[0]);
+		String query = args[1];
+		graphDb = new GraphServerAccess(DB_URI);
+
+		long startTime = System.nanoTime();
+		
+		JSONArray jsonArray = new JSONArray();
+		JSONObject returnValue = new JSONObject();
+		
+		switch(queryType)
+		{
+			case 1:
+			{
+				IndexHits<NodeJSON> classes = graphDb.getClassesInPackage_PUBLIC_ACCESS(query);
+				for(final NodeJSON classNode : classes)
+				{
+					JSONObject value = classNode.getJSONObject().getJSONObject("data");
+					jsonArray.put(value);
+				}
+				break;
+			}
+			case 2:
+			{
+				IndexHits<NodeJSON> methods = graphDb.getMethodsInClass_PUBLIC_ACCESS(query);
+				for(final NodeJSON methodNode : methods)
+				{
+					JSONObject value = methodNode.getJSONObject().getJSONObject("data");
+					jsonArray.put(value);
+				}
+				break;
+			}
+			case 3:
+			{
+				IndexHits<NodeJSON> methods = graphDb.getCandidateMethodNodes(query, new HashMap<String, IndexHits<NodeJSON>>());
+				for(NodeJSON methodNode : methods)
+				{
+					JSONObject value = methodNode.getJSONObject().getJSONObject("data");
+					jsonArray.put(value);
+				}
+				break;
+			}
+			default:
+			{
+				System.out.println("Invalid option");
+			}
+		}
+		
+		long endTime = System.nanoTime();
+		double time = (double)(endTime-startTime)/(1000000000);
+		returnValue.put("time", time);
+		returnValue.put("api_elements", jsonArray);
+		returnValue.put("count", jsonArray.length());
+		System.out.println(returnValue.toString(3));
+	}
+}

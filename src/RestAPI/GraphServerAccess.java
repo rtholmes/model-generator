@@ -130,7 +130,7 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), className + " "+ candidateClassCollection.size(), end, start);
 		return candidateClassCollection;
 	}
-	
+
 	//json works
 	public IndexHits<NodeJSON> getCandidateMethodNodes(String methodName, HashMap<String, IndexHits<NodeJSON>> candidateMethodNodesCache) 
 	{
@@ -189,10 +189,10 @@ public class GraphServerAccess
 			if(node.getProperty("id").startsWith("java."))
 				javaSet.add(node);
 		}
-		
+
 		if(javaSet.size() == 1)
 			return javaSet.iterator().next();*/
-		
+
 		if(cEliminator.checkIfCluster(set))
 		{
 			NodeJSON rightClass = cEliminator.findRightClass(set);
@@ -265,7 +265,7 @@ public class GraphServerAccess
 				parentElementCollection.add(nodejson);
 			}
 			parentNodeCache.put(childId, parentElementCollection);
-			
+
 			//
 			boolean ans = false;
 			ArrayList<NodeJSON> parentList = new ArrayList<NodeJSON>();
@@ -282,6 +282,54 @@ public class GraphServerAccess
 			return ans;
 		}
 	}
+
+	public IndexHits<NodeJSON> getClassesInPackage_PUBLIC_ACCESS(String packageName)
+	{
+		long start = System.nanoTime();
+
+		IndexHits<NodeJSON> candidateClassCollection = new IndexHits<NodeJSON>();
+
+		//String cypher = "START root=node:classes(id={startName}) RETURN root";
+		//String cypher = "START root=node:classes(\"id:" + packageName + "\") WHERE root.isPrimitive = {false} RETURN root";
+		String cypher = "START root=node:classes(\"id:" + packageName + ".*\") WHERE (root.vis = {public} OR root.vis = {notset}) RETURN root";
+		//String cypher = "START root=node:classes(id = {classname}) MATCH (root)-[:HAS_METHOD]->(method) WHERE method.exactName = {exactName} RETURN method";
+
+		JSONObject tempJSON = new JSONObject();
+		tempJSON.put("startName", packageName);
+		tempJSON.put("public", "PUBLIC");
+		tempJSON.put("notset", "NOTSET");
+		tempJSON.put("false", "false");
+		JSONObject json = new JSONObject();
+		json.put("query", cypher);
+		json.put("params", tempJSON);
+
+		String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+		JSONObject jsonArray = null;
+		try 
+		{
+			jsonArray = new JSONObject(jsonString);
+		}
+		catch (ParseException e) 
+		{
+			e.printStackTrace();
+		}
+		//System.out.println(jsonArray);
+		JSONArray tempArray = (JSONArray) jsonArray.get("data");
+		for(int i=0; i<tempArray.length(); i++)
+		{
+			JSONArray arr = tempArray.getJSONArray(i);
+			JSONObject obj = arr.getJSONObject(0);
+			NodeJSON nodejson = new NodeJSON(obj);
+			candidateClassCollection.add(nodejson);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), packageName + " "+ candidateClassCollection.size(), end, start);
+		return candidateClassCollection;
+
+
+
+	}
+
 
 	//json works i think
 	public ArrayList<ArrayList<NodeJSON>> getMethodNodeWithShortClass(String methodExactName, String classExactName, HashMap<String, ArrayList<ArrayList<NodeJSON>>> shortClassShortMethodCache, HashMap<NodeJSON, NodeJSON> methodReturnCache, HashMap<NodeJSON, NodeJSON> methodContainerCache)
@@ -445,7 +493,7 @@ public class GraphServerAccess
 		}
 		return _id;
 	}
-	
+
 	//json works
 	public ArrayList<NodeJSON> getParents(final NodeJSON node, HashMap<String, ArrayList<NodeJSON>> parentNodeCache )
 	{
@@ -492,7 +540,7 @@ public class GraphServerAccess
 		logger.printAccessTime(getCurrentMethodName(), node.getProperty("id").toString(), end, start);
 		return classElementCollection;
 	}
-	
+
 	//json works
 	public NodeJSON getMethodReturn(NodeJSON node, HashMap<NodeJSON, NodeJSON> methodReturnCache) 
 	{
@@ -582,6 +630,43 @@ public class GraphServerAccess
 		String jsonString = response.getEntity(String.class);
 		response.close();
 		return jsonString;
+	}
+
+	public IndexHits<NodeJSON> getMethodsInClass_PUBLIC_ACCESS(String className) {
+		long start = System.nanoTime();
+
+		IndexHits<NodeJSON> candidateMethodsCollection = new IndexHits<NodeJSON>();
+
+		String cypher = "START root=node:methods(\"id:" + className + ".*\") WHERE (root.vis = {public} OR root.vis = {notset}) RETURN root";
+
+		JSONObject tempJSON = new JSONObject();
+		tempJSON.put("public", "PUBLIC");
+		tempJSON.put("notset", "NOTSET");
+		JSONObject json = new JSONObject();
+		json.put("query", cypher);
+		json.put("params", tempJSON);
+
+		String jsonString = postQuery(DB_URI+ "/cypher", json.toString());
+		JSONObject jsonArray = null;
+		try 
+		{
+			jsonArray = new JSONObject(jsonString);
+		}
+		catch (ParseException e) 
+		{
+			e.printStackTrace();
+		}
+		JSONArray tempArray = (JSONArray) jsonArray.get("data");
+		for(int i=0; i<tempArray.length(); i++)
+		{
+			JSONArray arr = tempArray.getJSONArray(i);
+			JSONObject obj = arr.getJSONObject(0);
+			NodeJSON nodejson = new NodeJSON(obj);
+			candidateMethodsCollection.add(nodejson);
+		}
+		long end = System.nanoTime();
+		logger.printAccessTime(getCurrentMethodName(), className + " "+ candidateMethodsCollection.size(), end, start);
+		return candidateMethodsCollection;
 	}
 
 	/*public IndexHits<NodeJSON> getAllMethodsInClass(NodeJSON parentNode, HashMap<String, IndexHits<NodeJSON>> allMethodsInClass) 
