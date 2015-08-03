@@ -54,15 +54,19 @@ public class Graph {
 
 	public static void main(final String[] args) throws IOException {
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
-		nodeIndexClass = graphDb.index().forNodes("classes");
-		nodeIndexMethod = graphDb.index().forNodes("methods");
-		nodeIndexField = graphDb.index().forNodes("fields");
-		nodeIndexShortField = graphDb.index().forNodes("short_fields");
-		nodeIndexShortMethod = graphDb.index().forNodes("short_methods");
-		nodeIndexShortClass = graphDb.index().forNodes("short_classes");
-		nodeParents = graphDb.index().forNodes("parents");
+		try (Transaction tx = graphDb.beginTx()) {
+			nodeIndexClass = graphDb.index().forNodes("classes");
+			nodeIndexMethod = graphDb.index().forNodes("methods");
+			nodeIndexField = graphDb.index().forNodes("fields");
+			nodeIndexShortField = graphDb.index().forNodes("short_fields");
+			nodeIndexShortMethod = graphDb.index().forNodes("short_methods");
+			nodeIndexShortClass = graphDb.index().forNodes("short_classes");
+			nodeParents = graphDb.index().forNodes("parents");
 
-		registerShutdownHook();
+			registerShutdownHook();
+			tx.success(); // mostly needed for write operations but also doesn't
+							// hurt for read ops
+		}
 
 		// Uncomment for a single XML to be appended to the graph
 		/// *
