@@ -42,13 +42,13 @@ public class Graph {
 
 		for (ClassElement ce : knownModel.getClasses()) {
 			Node node = createAndIndexClassElement(ce);
+			for (MethodElement me : ce.getMethods()) {
+				createAndIndexMethodElement(me, ce);
+			}
+			for (FieldElement fe : ce.getFields()) {
+				createAndIndexFieldElement(fe, ce);
+			}
 			createAndIndexParents(ce, node);
-		}
-		for (MethodElement me : knownModel.getMethods()) {
-			createAndIndexMethodElement(me);
-		}
-		for (FieldElement fe : knownModel.getFields()) {
-			createAndIndexFieldElement(fe);
 		}
 	}
 
@@ -70,7 +70,7 @@ public class Graph {
 
 		// Uncomment for a single XML to be appended to the graph
 		/// *
-		String fName2 = "/Users/siddharth/Workspace/model-generator/rt.xml";
+		String fName2 = "/Users/siddharth/Workspace/model-generator/static_latest.xml";
 		Transaction tx0 = graphDb.beginTx();
 		try {
 			populate(fName2);
@@ -130,7 +130,7 @@ public class Graph {
 		}
 	}
 
-	private static Node createAndIndexMethodElement(MethodElement me) throws IOException {
+	private static Node createAndIndexMethodElement(MethodElement me, ClassElement ce) throws IOException {
 		IndexHits<Node> methodNodes = nodeIndexMethod.get("id", me.getId());
 		if (methodNodes.hasNext() == false) {
 			// System.out.println(me.getId());
@@ -139,7 +139,7 @@ public class Graph {
 			node.setProperty("exactName", me.getExactName());
 			node.setProperty("vis", me.getVisiblity().toString());
 
-			ClassElement parentClass = _model.getClass(me.extractClassName());
+			ClassElement parentClass = ce;
 			insertParentAndReturn(RelTypes.IS_METHOD, RelTypes.HAS_METHOD, parentClass, node);
 
 			ClassElement returnType = me.getReturnElement().getType();
@@ -161,7 +161,7 @@ public class Graph {
 			return methodNodes.getSingle();
 	}
 
-	private static Node createAndIndexFieldElement(FieldElement fe) throws IOException {
+	private static Node createAndIndexFieldElement(FieldElement fe, ClassElement ce) throws IOException {
 		IndexHits<Node> fieldNodes = nodeIndexField.get("id", fe.getId());
 		if (fieldNodes.hasNext() == false) {
 			// System.out.println(ce.getId());
@@ -175,8 +175,9 @@ public class Graph {
 			ClassElement fieldType = fe.getType();
 
 			insertParentAndReturn(RelTypes.IS_FIELD_TYPE, RelTypes.HAS_FIELD_TYPE, fieldType, node);
-			ClassElement parentClass = _model.getClass(fe.getExactName());
-			insertParentAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, parentClass, node);
+			System.out.println(fe.getId());
+			ClassElement parentClass = ce;
+			insertParentAndReturn(RelTypes.IS_FIELD, RelTypes.HAS_FIELD, ce, node);
 
 			/*
 			 * byte[] array = fe.convertFieldElementToByteArray();
