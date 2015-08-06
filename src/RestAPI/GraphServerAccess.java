@@ -197,7 +197,7 @@ public class GraphServerAccess {
 			logger.printAccessTime(getCurrentMethodName(), parentNode.getProperty("id") + " | " + childId, end, start);
 			return false;
 		} else {
-			String cypher = "START root=node:parentNodes(childId={childId}) RETURN root";
+			String cypher = "START root=node:parents(childId={childId}) RETURN root";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("childId", childId);
 			JSONObject json = new JSONObject();
@@ -423,7 +423,7 @@ public class GraphServerAccess {
 		if (parentNodeCache.containsKey(childId)) {
 			classElementCollection = parentNodeCache.get(childId);
 		} else {
-			String cypher = "START root=node:parentNodes(childId={childId}) RETURN root";
+			String cypher = "START root=node:parents(childId={childId}) RETURN root";
 			JSONObject tempJSON = new JSONObject();
 			tempJSON.put("childId", childId);
 			JSONObject json = new JSONObject();
